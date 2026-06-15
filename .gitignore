@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.egg-info/
+*.pt
+config/config.yaml
+config/zones.rollback.json
+monitor-results/
+calibration-captures/
+comparison-results/

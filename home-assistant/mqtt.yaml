@@ -1,0 +1,19 @@
+mqtt:
+  select:
+    - name: Lab Automation Mode
+      unique_id: labos_v2_mode
+      command_topic: labos/v2/automation/mode/set
+      state_topic: labos/v2/automation/mode/state
+      options: [manual, monitor, auto]
+      retain: true
+  sensor:
+    - name: Lab Vision Status
+      unique_id: labos_v2_vision_status
+      state_topic: labos/v2/vision/status
+    - name: Lab Controller Status
+      unique_id: labos_v2_controller_status
+      state_topic: labos/v2/controller/status
+    - name: Lab Automation Warning
+      unique_id: labos_v2_warning
+      state_topic: labos/v2/automation/warning
+

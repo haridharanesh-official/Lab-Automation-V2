@@ -1,0 +1,126 @@
+[
+  {
+    "id": "tab-v2",
+    "type": "tab",
+    "label": "Lab Automation v2 - SAFE",
+    "disabled": false,
+    "info": "Defaults to Manual. Only the Auto gate may publish relay /set commands."
+  },
+  {
+    "id": "mode-in",
+    "type": "mqtt in",
+    "z": "tab-v2",
+    "name": "Mode set",
+    "topic": "labos/v2/automation/mode/set",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "x": 100,
+    "y": 80,
+    "wires": [["mode-validate"]]
+  },
+  {
+    "id": "mode-validate",
+    "type": "function",
+    "z": "tab-v2",
+    "name": "Validate mode; default manual",
+    "func": "const m=String(msg.payload).toLowerCase(); const mode=['manual','monitor','auto'].includes(m)?m:'manual'; flow.set('mode',mode); msg.payload=mode; msg.retain=true; return msg;",
+    "outputs": 1,
+    "x": 330,
+    "y": 80,
+    "wires": [["mode-state"]]
+  },
+  {
+    "id": "mode-state",
+    "type": "mqtt out",
+    "z": "tab-v2",
+    "name": "Retained mode state",
+    "topic": "labos/v2/automation/mode/state",
+    "qos": "1",
+    "retain": "true",
+    "broker": "broker",
+    "x": 590,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "reports",
+    "type": "mqtt in",
+    "z": "tab-v2",
+    "name": "Complete six-zone reports",
+    "topic": "labos/v2/vision/zones/report",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker",
+    "x": 140,
+    "y": 180,
+    "wires": [["decision"]]
+  },
+  {
+    "id": "decision",
+    "type": "function",
+    "z": "tab-v2",
+    "name": "Validate, sequence, two-empty, map, dedupe",
+    "outputs": 3,
+    "func": "const r=msg.payload, mode=flow.get('mode')||'manual'; if(!r||r.version!=='2.0'||r.healthy!==true||!Array.isArray(r.zones)||r.zones.length!==6||r.total!==r.zones.reduce((a,b)=>a+b,0)||r.window_seconds!==60||r.sample_count<1)return [null,null,{payload:'invalid report'}]; const last=flow.get('seq')??-1;if(r.sequence<=last)return [null,null,{payload:'duplicate or out-of-order'}];flow.set('seq',r.sequence);let streak=flow.get('empty')||[0,0,0,0,0,0],prev=flow.get('intended')||[false,false,false,false,false,false,false,false,false,false];let z=r.zones.map((v,i)=>{if(v>0){streak[i]=0;return true;}streak[i]++;return streak[i]>=2?false:prev[i];});flow.set('empty',streak);let d=[...z,z[0]||z[1],z[1]||z[2],z[3]||z[4],z[4]||z[5]];flow.set('intended',d);let confirmed=flow.get('confirmed')||[false,false,false,false,false,false,false,false,false,false];let commands=d.map((v,i)=>v!==confirmed[i]?{topic:`labos/v2/relay/${i+1}/set`,payload:v?'ON':'OFF',retain:false}:null).filter(Boolean);let decision={payload:{mode,sequence:r.sequence,intended:d,commands:commands.length}};return [decision,mode==='auto'?commands:null,null];",
+    "x": 420,
+    "y": 180,
+    "wires": [["decision-out"], ["relay-out"], ["warning-out"]]
+  },
+  {
+    "id": "relay-out",
+    "type": "mqtt out",
+    "z": "tab-v2",
+    "name": "AUTO ONLY non-retained relay commands",
+    "topic": "",
+    "qos": "1",
+    "retain": "false",
+    "broker": "broker",
+    "x": 820,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "decision-out",
+    "type": "mqtt out",
+    "z": "tab-v2",
+    "name": "Monitor-safe intended decision",
+    "topic": "labos/v2/automation/decision",
+    "qos": "1",
+    "retain": "false",
+    "broker": "broker",
+    "x": 800,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "warning-out",
+    "type": "mqtt out",
+    "z": "tab-v2",
+    "name": "Warnings",
+    "topic": "labos/v2/automation/warning",
+    "qos": "1",
+    "retain": "false",
+    "broker": "broker",
+    "x": 750,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "broker",
+    "type": "mqtt-broker",
+    "name": "Local Mosquitto",
+    "broker": "localhost",
+    "port": "1883",
+    "clientid": "labos-v2-node-red",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true
+  }
+]
+

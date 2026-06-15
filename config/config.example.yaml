@@ -1,0 +1,18 @@
+mode: monitor
+camera:
+  url: rtsp://USERNAME:PASSWORD@CAMERA_IP/stream
+  reconnect_seconds: 5
+model:
+  path: models/backcam_yolov8s_improved_v3_hardfp.pt
+  confidence: 0.35
+  image_size: 1280
+  device: 0
+  tracker: bytetrack.yaml
+mqtt:
+  host: localhost
+  port: 1883
+  username: ""
+  password: ""
+report_seconds: 60
+heartbeat_seconds: 10
+display: true
