@@ -1,0 +1,40 @@
+# YOLOv8 Training Configuration for People Detection (Fixed Back Camera)
+
+# Dataset path
+data: C:/Users/prith/Downloads/Lab automation/LabVision-AI/datasets/labos_backcam_people_v4_clean/data.yaml
+
+# Model starting weights
+model: C:/Users/prith/Downloads/Lab Automation v2.0/models/backcam_yolov8s_improved_v3_hardfp.pt
+
+# Training settings
+epochs: 100
+patience: 20           # Early stopping patience
+batch: 16
+imgsz: 1280            # Production resolution
+device: 0              # CUDA device 0
+workers: 8
+
+# Optimizer settings
+optimizer: auto
+lr0: 0.001
+lrf: 0.01
+
+# Augmentations (Optimized for fixed lab camera)
+hsv_h: 0.015           # Hue augmentation
+hsv_s: 0.7             # Saturation augmentation
+hsv_v: 0.4             # Value (brightness) augmentation for lighting variations
+degrees: 0.0           # No rotation, camera is fixed
+translate: 0.1         # Small translation
+scale: 0.5             # Scale for varying distances
+shear: 0.0             # No shear
+perspective: 0.0       # No perspective
+flipud: 0.0            # No upside-down people
+fliplr: 0.5            # Horizontal flips are okay
+mosaic: 0.5            # Reduced mosaic to maintain realistic scenes
+mixup: 0.0             # No mixup to avoid ghosting
+copy_paste: 0.0        # No copy-paste
+
+# Optimization for NMS and Duplicate Prevention during validation
+conf: 0.35             # Target production threshold
+iou: 0.70              # Initial NMS threshold baseline
+single_cls: True       # Treat all as single class (person)

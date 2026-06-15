@@ -9,3 +9,13 @@ config/zones.rollback.json
 monitor-results/
 calibration-captures/
 comparison-results/
+
+# Exclude datasets and large media
+datasets/
+review/
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.avi
+*.weights
