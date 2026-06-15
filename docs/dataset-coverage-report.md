@@ -1,12 +1,12 @@
 # Dataset Coverage Report
 
 ## Split Distribution
-- train: 123 images
+- train: 154 images
 - val: 0 images
 - test: 0 images
 
 ## Hard Negatives
-- Empty Lab Scenes (0 boxes): 3
+- Empty Lab Scenes (0 boxes): 34
 *(Recommendation: Add more diverse empty-lab scenes if possible)*
 
 ## Person Counts per Image
