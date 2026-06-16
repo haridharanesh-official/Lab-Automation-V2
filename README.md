@@ -2,6 +2,14 @@
 
 An AI-driven, multi-zone room automation system using YOLOv8, Home Assistant, Node-RED, and ESP32.
 
+## Current Status
+
+- Software validation complete
+- Hardware deployment pending
+- Not physically production-ready until supervised relay validation passes
+
+Do not enable physical Auto mode until live camera, MQTT, ESP32 relay, Node-RED, Home Assistant, zone calibration, supervised Auto-mode, and failure tests all pass on real hardware.
+
 ## Setup Instructions
 
 ### 1. Python Environment (AI PC)
@@ -59,4 +67,4 @@ All topics operate under `labos/v2/`.
 7. Run `py -3.11 -m pytest`.
 8. Run Monitor-mode simulations before considering Auto.
 
-Do not enable physical Auto mode until every item in `docs/validation-checklist.md` is supervised and verified.
+Physical deployment is gated by `docs/validation-checklist.md`. The current known blocker is the RTSP path `rtsp://hari:8554/labcam`, which returns `404 Not Found` until the upstream camera source is restored.
