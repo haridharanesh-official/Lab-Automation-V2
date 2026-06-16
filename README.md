@@ -91,6 +91,20 @@ set PYTHONPATH=ai-pc
 .\.venv\Scripts\python.exe -m src.main --config config/config.yaml
 ```
 
+Preferred operator wrapper on the Windows AI PC:
+
+```powershell
+.\start_lab_automation.ps1 -DryRun
+.\start_lab_automation.ps1
+.\status_lab_automation.ps1
+.\stop_lab_automation.ps1
+```
+
+What these scripts do:
+- `start_lab_automation.ps1`: verifies the venv, config, zones, model, RTSP stream, MQTT broker, and live retained topics before starting the AI publisher with log capture.
+- `stop_lab_automation.ps1`: stops only the AI publisher wrapper started by the master startup script.
+- `status_lab_automation.ps1`: shows camera reachability, MQTT reachability, latest `mode_state`, heartbeat age, and whether the AI publisher appears to be running.
+
 ### 4. Other Existing Operator Scripts
 
 - Setup Windows environment:
@@ -109,6 +123,7 @@ set PYTHONPATH=ai-pc
 - `hari` has user services for `mediamtx.service`, `labos-camera-bridge.service`, and `labcam-healthcheck.timer`.
 - `labos` has system services for Node-RED-adjacent helpers, event logging, mock relay behavior, and health/status monitoring.
 - The AI PC currently has helper scripts, but no repo-tracked Windows service, Scheduled Task, or startup script that automatically launches the live MQTT publisher on boot/login.
+- The new master wrapper scripts provide a safe manual startup path, but they still do not install a Windows auto-start service or Scheduled Task.
 
 ## Validation History
 - AI publisher accepts only safe topics.

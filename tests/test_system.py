@@ -295,3 +295,32 @@ def test_fallback_window_helper():
     assert is_within_fallback_window(datetime(2026, 6, 16, 8, 30))
     assert is_within_fallback_window(datetime(2026, 6, 16, 13, 15))
     assert not is_within_fallback_window(datetime(2026, 6, 16, 12, 45))
+
+
+def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
+    start_script = (ROOT / "start_lab_automation.ps1").read_text()
+    stop_script = (ROOT / "stop_lab_automation.ps1").read_text()
+    status_script = (ROOT / "status_lab_automation.ps1").read_text()
+    startup_doc = (ROOT / "docs/startup-and-shutdown.md").read_text()
+
+    assert ".venv\\Scripts\\python.exe" in start_script
+    assert "config\\config.yaml" in start_script
+    assert "config\\zones.json" in start_script
+    assert "models\\backcam_yolov8s_improved_v3_hardfp.pt" in start_script
+    assert "lab/automation/mode_state" in start_script
+    assert "lab/vision/heartbeat" in start_script
+    assert "labos:1883" not in start_script  # config-driven, not hard-coded
+    assert "rtsp://hari:8554/labcam" not in start_script  # config-driven, not hard-coded
+    assert "src.main" in start_script
+    assert "logs\\ai-publisher" in start_script
+    assert "did not change automation mode" in start_script
+    assert "lab/control" not in start_script
+
+    assert "src.main" in stop_script
+    assert "ai-publisher.pid.json" in stop_script
+
+    assert "latest_mode_state" in status_script
+    assert "latest_vision_heartbeat_age_seconds" in status_script
+
+    assert ".\\start_lab_automation.ps1 -DryRun" in startup_doc
+    assert ".\\stop_lab_automation.ps1" in startup_doc

@@ -27,3 +27,27 @@
 
 7. **Secrets Management**:
    Never commit `.env` files, passwords, camera URLs with credentials, or Wi-Fi SSIDs to this repository. All credentials should be stored securely on the host machines (e.g., in `~/.config/` or `esp32` local changes).
+
+## Windows AI PC Startup
+
+Use the AI PC startup wrapper from the repository root:
+
+```powershell
+.\start_lab_automation.ps1 -DryRun
+.\start_lab_automation.ps1
+```
+
+Safety behavior of the wrapper:
+- verifies `.venv\Scripts\python.exe`, `config\config.yaml`, `config\zones.json`, `models\backcam_yolov8s_improved_v3_hardfp.pt`, and `ai-pc\src\main.py`
+- checks MQTT reachability to `labos:1883`
+- checks the RTSP stream at `rtsp://hari:8554/labcam`
+- attempts to read retained `lab/automation/mode_state` and `lab/vision/heartbeat`
+- starts only the AI vision publisher and writes logs under `logs\ai-publisher\`
+- does **not** change the automation mode and does **not** publish any relay/control topics
+
+Use these companion commands as needed:
+
+```powershell
+.\status_lab_automation.ps1
+.\stop_lab_automation.ps1
+```
