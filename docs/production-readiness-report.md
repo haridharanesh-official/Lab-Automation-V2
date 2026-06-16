@@ -114,6 +114,8 @@ Status: Hardware deployment pending
 Status: Hardware deployment pending
 
 - Importable repo v2 flow exists, but deployed `labos` runtime currently consumes `lab/...` AI topics instead of the earlier repo draft `labos/v2/...` topic plan.
+- Repo flow design now implements priority order: manual override, then timetable fallback, then healthy people-count automation.
+- Repo flow now includes documented manual override clearing and fallback windows `08:30-12:30` and `13:00-16:30`.
 - Deployed Node-RED process on `labos`: running
 - Deployed runtime mode observed on MQTT during validation: `manual`
 - Live AI -> MQTT -> deployed Node-RED path: verified

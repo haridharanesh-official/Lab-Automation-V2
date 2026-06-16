@@ -1,5 +1,6 @@
 import importlib.util
 import json
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
@@ -16,7 +17,13 @@ def load(name):
 
 import sys
 sys.path.insert(0, str(ROOT / "ai-pc"))
-from src.automation import AutomationController, desired_relays
+from src.automation import (
+    AutomationController,
+    PrioritySafetyController,
+    desired_relays,
+    desired_lab_relays_for_stage,
+    is_within_fallback_window,
+)
 from src.main import camera_interrupted
 from src.mqtt_publisher import VisionPublisher
 from src.reporting import build_report, validate_report
@@ -97,7 +104,14 @@ def test_artifacts_enforce_namespace_and_gpio():
     assert "GPIO 5" not in ino
     assert "homeassistant/switch/" in ino
     flow = json.loads((ROOT / "node-red/flows.json").read_text())
-    assert all("labos/v2/" in node.get("topic", "labos/v2/") or node.get("topic", "") == "" for node in flow if "topic" in node)
+    assert all("lab/" in node.get("topic", "lab/") or node.get("topic", "") == "" for node in flow if "topic" in node)
+    fn_node = next(node for node in flow if node.get("type") == "function" and node.get("name") == "Priority Safety Controller")
+    func = fn_node["func"]
+    assert "manual_override/clear" in json.dumps(flow)
+    assert "TIMETABLE_FALLBACK" in func
+    assert "manualOverrides" in func
+    assert "priority_state" in func
+    assert "8*60+30" in func and "13*60" in func
 
 
 def test_vision_publisher_rejects_unsafe_topics_before_client_publish():
@@ -160,3 +174,73 @@ def test_all_requested_monitor_scenarios_send_zero_commands():
     assert controller.process(report(1, scenarios[0]))["commands"] == []
     assert controller.process({"version": "2.0"})["commands"] == []
     assert controller.vision_unavailable()["commands"] == []
+
+
+def test_priority_controller_manual_override_wins():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 16, 9, 0, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.last_count_ms = now_ms
+    controller.last_known_automation = desired_lab_relays_for_stage("TWO_THREE")
+    controller.manual_overrides[2] = "OFF"
+    payload = {
+        "timestamp": now_ms,
+        "stable_count": 4,
+        "source_healthy": True,
+        "status": "online",
+    }
+    result = controller.process_people_count(payload, now)
+    assert result["wanted"][2] == "OFF"
+
+
+def test_priority_controller_timetable_fallback_inside_window():
+    controller = PrioritySafetyController(mode="auto")
+    controller.mark_service_status("offline")
+    controller.mark_source_status("unhealthy")
+    now = datetime(2026, 6, 16, 9, 0, 0)
+    result = controller.process_people_count({}, now)
+    assert result["stage"] == "TIMETABLE_FALLBACK"
+    assert result["wanted"] == desired_lab_relays_for_stage("FOUR_PLUS")
+
+
+def test_priority_controller_outside_window_delays_off():
+    controller = PrioritySafetyController(mode="auto")
+    controller.last_known_automation = desired_lab_relays_for_stage("ONE")
+    controller.mark_service_status("offline")
+    controller.mark_source_status("unhealthy")
+    first = controller.process_people_count({}, datetime(2026, 6, 16, 18, 0, 0))
+    assert first["stage"] == "TIMETABLE_HOLD"
+    controller.fallback_off_since_ms -= controller.outside_window_off_delay_ms + 1
+    second = controller.process_people_count({}, datetime(2026, 6, 16, 18, 10, 0))
+    assert second["stage"] == "TIMETABLE_OFF"
+
+
+def test_priority_controller_healthy_people_count_drives_automation():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 16, 9, 5, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    payload = {
+        "timestamp": now_ms,
+        "stable_count": 2,
+        "source_healthy": True,
+        "status": "online",
+    }
+    first = controller.process_people_count(payload, now)
+    second = controller.process_people_count(payload, now)
+    controller.last_apply_ms -= controller.min_change_ms + 1
+    third = controller.process_people_count(payload, now)
+    assert first["stage"] == "STABILIZING"
+    assert second["stage"] == "STABILIZING"
+    assert third["stage"] == "TWO_THREE"
+
+
+def test_fallback_window_helper():
+    assert is_within_fallback_window(datetime(2026, 6, 16, 8, 30))
+    assert is_within_fallback_window(datetime(2026, 6, 16, 13, 15))
+    assert not is_within_fallback_window(datetime(2026, 6, 16, 12, 45))

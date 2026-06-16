@@ -59,6 +59,8 @@ Status labels:
 - [x] Monitor MQTT test observed zero relay `/set` commands.
 - [x] Verified deployed `labos` Node-RED receives and processes `lab/vision/people_count`.
 - [x] Verified Manual mode emits zero relay `/set` commands during live AI publishing.
+- [x] Repo flow now models priority order: manual override > timetable fallback > healthy people-count automation.
+- [x] Repo flow now documents manual override clear topic and timetable fallback windows.
 - [ ] Verify `labos/v2/automation/decision` response on live Node-RED.
 - [x] Auto deduplicates relay commands and requires two empty reports before OFF in software tests.
 - [x] Validated relay mapping in software tests.

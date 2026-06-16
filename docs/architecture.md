@@ -1,8 +1,8 @@
 # Architecture and Operation
 
-`Camera -> AI PC -> labos/v2/vision/# -> Mosquitto -> Node-RED -> labos/v2/relay/+/set -> ESP32`
+`Camera -> AI PC -> lab/vision/# -> Mosquitto -> Node-RED -> lab/control/relayX/set -> ESP32`
 
-Home Assistant uses MQTT for manual switches, mode selection, and monitoring. The AI PC has no API capable of relay command publication. Node-RED validates complete reports, rejects stale sequence numbers, applies two-empty-report shutdown, calculates fan OR rules, and deduplicates against confirmed relay state.
+Home Assistant uses MQTT for manual switches, mode selection, and monitoring. The AI PC has no API capable of relay command publication. Node-RED owns the relay path and now implements a strict priority order: manual override first, timetable fallback second, healthy people-count automation third. The flow rejects stale vision, preserves state on failure, applies delayed zero/off behavior, and deduplicates against confirmed relay state.
 
 ## Recovery
 
@@ -11,4 +11,3 @@ Home Assistant uses MQTT for manual switches, mode selection, and monitoring. Th
 3. Confirm heartbeats and state topics.
 4. Use Monitor mode and simulator reports to validate decisions.
 5. Resume Auto only under supervision.
-
