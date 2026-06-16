@@ -96,6 +96,7 @@ Status: Partially verified
 - Camera retry Monitor validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 - Ten-minute live model validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 - Ten-minute live people-count validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
+- Empty-lab stability validation with live MQTT enabled ran for about 11 minutes in Monitor mode, kept repeated `stable_count = 0`, produced zero false positives, and emitted zero relay `/set` commands.
 
 ## ESP32 Readiness
 
@@ -128,6 +129,7 @@ Status: Hardware deployment pending
 - Healthy people-count path was verified live in Monitor mode through `intended_state` output with zero relay commands.
 - Inside-window timetable fallback still needs a live validation pass during an active class window.
 - Follow-up debug confirmed the correct live mode command is plain retained string payloads on `lab/automation/mode` such as `auto`; the earlier failed Auto confirmation was caused by reading the stale retained `mode_state=manual` message before the fresh `mode_state=auto` event arrived.
+- Empty-lab stability validation later confirmed that repeated `stable_count = 0` is the correct result for the currently empty room and not evidence of a failed model.
 
 ## Home Assistant Readiness
 
@@ -157,7 +159,7 @@ Status: Hardware deployment pending
 Status: Not physically production-ready until supervised relay validation passes
 
 - A short supervised Auto-mode entry/exit safety check was completed against the deployed `labos` flow.
-- In the latest supervised check, `lab/automation/mode` accepted `auto`, but the live runtime did not emit a confirming `lab/automation/mode_state = auto` update or any relay `/set` activity during staged count testing.
+- Earlier confusion about `mode_state` was resolved: fresh `lab/automation/mode_state = auto` does publish when captured correctly.
 - Final mode was returned to `manual` successfully.
 - Manual baseline stayed safe, Monitor mode produced intended states, and manual override capture/clear worked.
 - The supervised Auto attempt emitted zero relay `/set` commands.
@@ -179,7 +181,6 @@ Status: Hardware deployment pending
 
 - Keep monitoring the hardened `/labcam` bridge and health-check timer during longer unattended runs.
 - Reduce or eliminate upstream HEVC reference-frame decode warnings if they affect downstream analytics.
-- Resolve the live `lab/automation/mode` to active Auto behavior mismatch on `labos`.
 - Verify ESP32 firmware on real hardware.
 - Verify Home Assistant entities.
 - Complete supervised manual relay mapping.

@@ -36,3 +36,27 @@ Automated geometry validation confirms each approximate polygon centre maps uniq
 - No reports or false-zero reports are emitted by the live validation tool.
 
 Status: blocked pending restoration or correction of a known RTSP source and supervised zone calibration.
+
+## Empty-Lab Stability Validation
+
+Date: June 16, 2026
+
+A separate empty-lab validation was completed later against the restored `rtsp://hari:8554/labcam` stream with:
+
+- live AI publisher MQTT enabled
+- Node-RED mode held in `monitor`
+- final mode returned to `manual`
+
+Measured results:
+
+- runtime: about 11 minutes (`660` second publisher duration)
+- stream: opened successfully, `1280x720`, HEVC, `25 FPS`
+- live people-count samples remained consistently:
+  - `total_count = 0`
+  - `stable_count = 0`
+  - `zone_counts = [0,0,0,0,0,0]`
+- false positives in published stable counts: `0`
+- relay `/set` commands observed: `0`
+- `lab/automation/vision_health` reached `healthy` during the active run and remained healthy until shutdown
+
+This was an empty-lab-only stability check. Repeated zero count is the expected correct result and should not be treated as a model failure.
