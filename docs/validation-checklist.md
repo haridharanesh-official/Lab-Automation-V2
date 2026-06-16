@@ -92,6 +92,7 @@ Status labels:
 - [x] Updated the live `labos` Home Assistant discovery publisher so the mode selector uses `state_topic = lab/automation/mode_state` and options `manual`, `monitor`, `auto`.
 - [x] Confirm stale vision no longer forces Node-RED `mode_state` back to `manual`.
 - [x] Reconfirmed fresh live `mode_state` transitions for `manual`, `monitor`, and `auto` on June 17, 2026.
+- [ ] Directly click through the Home Assistant UI selector for `manual -> monitor -> auto -> manual`.
 - [ ] Verify health, warning, status, and mismatch sensors.
 
 ## Testing
@@ -101,6 +102,8 @@ Status labels:
 - [x] Validate live simulation-only priority-safety path with final mode returned to Manual.
 - [x] Resolve live `lab/automation/mode` to active Auto behavior confirmation on `labos`.
 - [x] Complete 10-15 minute empty-lab Monitor validation with repeated `stable_count = 0`, zero false positives, and zero relay `/set` commands.
+- [x] Complete live monitor-mode simulator validation with zero relay `/set` commands.
+- [x] Complete live auto-mode mock-path simulator validation with final mode returned to Manual.
 - [ ] Complete full supervised Auto-mode validation with occupied-scene relay changes.
 - [ ] Complete supervised occupied-scene Auto validation with non-zero stable counts observed on live `lab/vision/people_count`.
 - [x] Complete supervised Auto-mode entry/exit safety check with final mode returned to Manual.

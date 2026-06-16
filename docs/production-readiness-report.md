@@ -98,6 +98,7 @@ Status: Partially verified
 - Ten-minute live people-count validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 - Empty-lab stability validation with live MQTT enabled ran for about 11 minutes in Monitor mode, kept repeated `stable_count = 0`, produced zero false positives, and emitted zero relay `/set` commands.
 - June 17, 2026 startup/shutdown validation reconfirmed that both headless and display launch modes publish only `lab/vision/#` and emitted zero observed `lab/control/+/set` traffic from the AI publisher.
+- June 17, 2026 live broker captures also reconfirmed fresh `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/people_count` traffic while the AI publisher was running in both headless and display mode.
 
 ## ESP32 Readiness
 
@@ -136,7 +137,11 @@ Status: Hardware deployment pending
 - The live relay safety helper `/home/labos/labos-edge/services/safety-layer/relay_ack_monitor.py` was also modernized so it logs unsafe relay states and timeout errors but does not inject relay OFF commands. Node-RED is now the only relay-command publisher in the validated runtime path.
 - The live system-health monitor was updated to observe the current JSON `lab/vision/people_count` topic instead of the old `/state` count topic.
 - June 17, 2026 live mode-transition retest reconfirmed fresh non-retained `mode_state` updates for `manual`, `monitor`, and `auto`.
+- June 17, 2026 live simulator validation reconfirmed:
+  - `monitor` mode publishes intended diagnostics with zero relay `/set` commands
+  - `auto` mode can drive the current mock relay path and then return to `manual`
 - June 17, 2026 stale-vision retest kept `mode_state = auto`, but the live diagnostics were still noisy because `labos-mock-relay.service` and current manual-override state continued to republish healthy/people-count diagnostics during the window. That fallback path should be retested with cleaner live conditions before Auto is left enabled at the end of a validation run.
+- The active helper services on `labos` are the `labos-*` units plus containerized/process-level Mosquitto, Node-RED, and Home Assistant. Generic unit names such as `mosquitto.service`, `node-red.service`, and `home-assistant.service` are not present on this host.
 
 ## Home Assistant Readiness
 
@@ -149,6 +154,7 @@ Status: Hardware deployment pending
 - Home Assistant entity registry on June 17, 2026 confirmed the selector capabilities were updated live to `manual`, `monitor`, and `auto`.
 - During live MQTT validation after the cleanup, `manual`, `monitor`, and `auto` all produced fresh matching `mode_state` updates with no forced return to `manual`.
 - This June 17 run reconfirmed the live mode contract over MQTT, but did not directly drive the Home Assistant web selector UI during the session.
+- Live repo/discovery configuration still matches the intended selector contract: command topic `lab/automation/mode`, state topic `lab/automation/mode_state`, options `manual`, `monitor`, `auto`.
 - Ten relay switches, six zone sensors, warning/status/mismatch entities still require live Home Assistant verification.
 - The current `labos` runtime still runs `labos-mock-relay.service`, so this Home Assistant validation covered the UI-to-MQTT-to-Node-RED contract and mock relay path, not physical relay hardware.
 
@@ -183,6 +189,8 @@ Status: Not physically production-ready until supervised relay validation passes
 - Follow-up live debug confirmed `lab/automation/mode = auto` is correct and fresh `lab/automation/mode_state = auto` does publish when captured correctly.
 - In the subsequent supervised occupied-scene Auto attempt, fresh `mode_state = auto` was observed, but the AI stream still reported only `stable_count = 0`, so no intended-state scene transitions or relay commands were triggered.
 - In the latest startup/shutdown validation run, Auto was exercised only for safe controller-path checks and was returned to `manual` at the end of the session.
+- A controlled mock-path Auto validation on June 17, 2026 observed two relay `/set` messages on the mock path (`relay7 ON`, then `relay7 OFF`) while final mode was returned to `manual`.
+- This remains mock-path validation only because `labos-mock-relay.service` is still active and no real ESP32/light/fan hardware claim was made.
 
 ## Failure-Test Readiness
 

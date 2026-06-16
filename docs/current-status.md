@@ -9,6 +9,9 @@ Lab Automation v2.0 is currently in the **validation phase**. Software validatio
 - **Camera Stream**: `rtsp://hari:8554/labcam` is active and stable.
 - **AI Publisher**: Correctly restricted to publishing `lab/vision/#`. It successfully drops all control commands.
 - **Windows Startup Wrapper**: Headless and display startup/shutdown were validated live against `labos:1883` and `rtsp://hari:8554/labcam`. The display metadata bug was fixed by making PID-file parsing tolerant of older entries that do not yet contain the `display` flag.
+- **Live Mode Contract**: Fresh MQTT-driven transitions for `manual`, `monitor`, and `auto` were reconfirmed on June 17, 2026. Direct Home Assistant UI click-through remains pending, but the live command/state contract is aligned.
+- **Monitor Safety Check**: A controlled live MQTT simulator pass in `monitor` mode produced intended-state diagnostics with `0` relay `/set` commands.
+- **Auto Mock-Path Check**: A short controlled live MQTT simulator pass in `auto` mode produced mock relay `/set` traffic on the `labos-mock-relay.service` path and then returned cleanly to `manual`.
 - **Empty-Lab Validation**: Ran for ~11 minutes in Monitor mode with:
   - 0 false positives
   - 0 relay `/set` commands issued
@@ -19,6 +22,7 @@ Lab Automation v2.0 is currently in the **validation phase**. Software validatio
 - **Mode Authority**: The legacy `labos-automation.service` bridge was modernized into a passive observer, so it no longer republishes `lab/automation/mode` or relay `/set` topics.
 - **Relay Command Authority**: The live relay-ack monitor no longer injects relay OFF commands; Node-RED is now the only live relay-command publisher in the validated path.
 - **Live Runtime Caveat**: `labos` is still running `labos-mock-relay.service`, so the latest end-to-end authority validation covered the control path and MQTT contract, not physical ESP32 load switching.
+- **Service Naming Caveat**: The live `labos` host does not expose generic systemd unit names like `mosquitto.service`, `node-red.service`, or `home-assistant.service`; verification was performed through listening ports, process inspection, and the active `labos-*` helper services.
 - **Latest Auto Gate Result**: Live mode transitions `manual -> monitor -> auto -> manual` were reconfirmed over MQTT, but the stale-vision fallback path still needs a cleaner live validation before leaving the system in Auto unattended.
 
 ## Safe Mode Enforcements

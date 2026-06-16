@@ -8,5 +8,6 @@
 - Manual state seems stuck: inspect `lab/automation/manual_override_state` and clear using `lab/automation/manual_override/clear`.
 - Relay does not change: confirm Auto mode, valid sequence, desired-versus-confirmed difference, ESP32 online status, and non-retained `/set`.
 - Relay flickers: disable Auto immediately, inspect duplicate publishers and retained `/set` messages. Legacy helpers must not inject relay `/set`; after the June 17, 2026 cleanup, `labos-automation.service` is passive and `labos-relay-ack-monitor.service` logs only.
+- `labos-relay-ack-monitor.service` still logs noisy relay topic parse errors from older assumptions about `lab/control/relayX/state` and `/set` topic parsing. Treat those logs as a diagnostics cleanup item unless they are accompanied by actual injected relay commands.
 - ESP32 boot issue: confirm GPIO mapping exactly matches firmware and GPIO 5 is unused.
 - Recovery always starts in Manual, then Monitor, then supervised Auto.
