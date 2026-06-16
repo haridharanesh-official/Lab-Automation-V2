@@ -127,6 +127,7 @@ Status: Hardware deployment pending
 - Outside-window timetable fallback was verified live as `TIMETABLE_HOLD`.
 - Healthy people-count path was verified live in Monitor mode through `intended_state` output with zero relay commands.
 - Inside-window timetable fallback still needs a live validation pass during an active class window.
+- Follow-up debug confirmed the correct live mode command is plain retained string payloads on `lab/automation/mode` such as `auto`; the earlier failed Auto confirmation was caused by reading the stale retained `mode_state=manual` message before the fresh `mode_state=auto` event arrived.
 
 ## Home Assistant Readiness
 

@@ -41,6 +41,28 @@ Node-RED alone may publish relay commands. The AI PC publishes only `lab/vision/
 - `lab/control/relayX/state`
 - `lab/control/status`
 
+## Correct Mode Command
+
+The live `labos` flow expects the mode command as a plain MQTT string payload on:
+
+- topic: `lab/automation/mode`
+- payload: `manual`, `monitor`, or `auto`
+
+Recommended command examples:
+
+```powershell
+mosquitto_pub -h labos -t lab/automation/mode -r -m manual
+mosquitto_pub -h labos -t lab/automation/mode -r -m monitor
+mosquitto_pub -h labos -t lab/automation/mode -r -m auto
+```
+
+Notes:
+
+- payload is not JSON
+- casing is normalized to lowercase by the flow
+- `mode_state` is published as a retained diagnostic message and may also be republished on later ticks
+- when validating transitions, ignore stale retained history and capture fresh events after subscribing
+
 ## Manual Override
 
 Manual override has the highest priority.

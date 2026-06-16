@@ -103,3 +103,22 @@ This supervised run did **not** complete final hardware validation because the A
 - real relay/light/fan mapping confirmation
 - repeated-command and flicker observation under real load changes
 - camera interruption behavior under supervised Auto mode
+
+## Follow-up Debug Result
+
+Later live debug isolated the `mode_state` confusion:
+
+- the deployed `labos` flow **does** accept plain string `auto` on `lab/automation/mode`
+- fresh `lab/automation/mode_state = auto` **does** publish when the subscriber is already armed
+- the earlier failed check exited too early after reading the old retained `manual` state
+
+Armed capture also showed that live Auto relay commands were being missed by the earlier check:
+
+- staged `stable_count = 1` produced `lab/automation/intended_state` transitions `STABILIZING -> ONE`
+- relay `/set` messages captured during the debug run:
+  - `lab/control/relay3/set OFF`
+  - `lab/control/relay4/set OFF`
+  - `lab/control/relay6/set OFF`
+  - `lab/control/relay8/set OFF`
+
+This means the live flow was active in Auto during the debug run; the earlier zero-command result was a measurement issue, not proof that Auto was inactive. Physical occupied-scene validation still remains pending.

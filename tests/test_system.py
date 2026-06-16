@@ -112,6 +112,10 @@ def test_artifacts_enforce_namespace_and_gpio():
     assert "manualOverrides" in func
     assert "priority_state" in func
     assert "8*60+30" in func and "13*60" in func
+    assert "topic==='lab/automation/mode'" in func
+    assert "String(msg.payload).trim().toLowerCase()" in func
+    assert "['manual','monitor','auto'].includes(next)" in func
+    assert "diagnostics.push(m('lab/automation/mode_state',value,true))" in func
 
 
 def test_vision_publisher_rejects_unsafe_topics_before_client_publish():
