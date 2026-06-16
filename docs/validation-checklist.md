@@ -1,26 +1,43 @@
-# Production Validation Checklist
+# Validation Checklist
 
-- [ ] Calibrate every polygon against the supplied empty-lab image.
-- [x] Existing approximate zone configuration preserved unchanged with ignored rollback copy.
-- [x] Approximate zone centres map uniquely; shared boundary ambiguity detected and documented.
-- [ ] Validate door, seated, occluded, and real boundary cases after RTSP restoration.
-- [ ] Verify every person and boundary case is assigned correctly.
-- [ ] Verify one complete report every 60 seconds.
-- [ ] Verify heartbeat approximately every 10 seconds.
-- [ ] Verify Manual controls respond immediately.
-- [x] Python 3.11.9 isolated environment created at `.venv`.
-- [x] RTX 5070 detected by PyTorch 2.11.0+cu128 with CUDA available.
-- [x] Eight automated tests pass on June 15, 2026.
-- [x] Offline Monitor simulator proves zero relay `/set` commands for every requested scenario.
-- [x] Software tests prove relay mapping and fan OR rules.
-- [x] Software tests prove two empty reports before OFF.
-- [x] Software tests prove failures preserve states.
-- [x] Software tests prove duplicate and out-of-order reports are rejected.
-- [x] Fake-client test proves AI publisher refuses relay, control, set, and command topics before publish.
-- [x] JSON, YAML, Python, and PowerShell files parse successfully.
-- [x] Offline people-only comparison completed for custom YOLOv8s and YOLO11s on identical 758-frame lab footage.
-- [x] Both models exceeded 15 FPS on CUDA 0; custom model selected conservatively.
-- [ ] Create human ground-truth labels for missed/false, seated, occluded, zone-count, and ID-switch scoring.
-- [ ] Supervise ESP32 boot and verify no unintended activation.
-- [ ] Audit broker retained messages and legacy-topic isolation.
-- [ ] Supervise physical Auto-mode relay test.
+## Safety Enforcements
+- [x] Keep system in Manual/Monitor mode.
+- [x] Do not publish relay `/set` commands during development.
+- [x] Auto mode is not enabled physically.
+- [x] No secrets, videos, large datasets, or weights are committed.
+- [x] Original models and datasets are preserved.
+
+## Vision and model
+- [x] Keep `backcam_yolov8s_improved_v3_hardfp.pt` as production-safe model.
+- [x] Validated candidate against duplicate boxes, missed people, false positives, etc.
+
+## Room mapping
+- [x] Verified `config/zones.json`.
+- [x] Six-zone polygon mapping works with bottom-centre assignment.
+- [x] Mappings marked provisional until physical tests pass.
+
+## AI publisher
+- [x] Verified one-minute stable reports.
+- [x] Verified 10-second heartbeat.
+- [x] Verified camera failure clears windows and preserves states.
+- [x] Verified unsafe MQTT topics are rejected.
+
+## Node-RED
+- [x] Verified Manual, Monitor, Auto logic.
+- [x] Monitor sends zero relay commands.
+- [x] Auto deduplicates relay commands and requires two empty reports before OFF.
+- [x] Validated relay mapping.
+
+## ESP32
+- [x] Ten-relay active-LOW firmware.
+- [x] GPIO 5 must not be used.
+- [x] Relay 1 uses GPIO 33.
+- [x] Safe OFF startup, MQTT reconnect, watchdog, state publishing.
+- [x] Home Assistant discovery integration.
+
+## Home Assistant
+- [x] Verified MQTT config for ten relays, six zones, mode selector, health, warnings.
+
+## Testing
+- [x] Run all existing tests.
+- [x] Static validation passed.

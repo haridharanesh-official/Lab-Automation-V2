@@ -40,7 +40,12 @@ void connectMqtt() {
     String id = "labos-v2-esp32-" + String((uint32_t)ESP.getEfuseMac(), HEX);
     if (mqtt.connect(id.c_str(), "labos/v2/controller/status", 1, true, "offline")) {
       mqtt.publish("labos/v2/controller/status", "online", true);
-      for (int i = 1; i <= 10; i++) mqtt.subscribe((String(BASE) + "/relay/" + i + "/set").c_str(), 1);
+      for (int i = 1; i <= 10; i++) {
+        mqtt.subscribe((String(BASE) + "/relay/" + i + "/set").c_str(), 1);
+        String discoveryTopic = "homeassistant/switch/" + id + "_relay_" + i + "/config";
+        String payload = "{\"name\":\"Lab Relay " + String(i) + "\",\"unique_id\":\"" + id + "_relay_" + i + "\",\"stat_t\":\"" + String(BASE) + "/relay/" + i + "/state\",\"cmd_t\":\"" + String(BASE) + "/relay/" + i + "/set\"}";
+        mqtt.publish(discoveryTopic.c_str(), payload.c_str(), true);
+      }
     } else delay(2000);
   }
 }

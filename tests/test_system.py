@@ -94,6 +94,7 @@ def test_artifacts_enforce_namespace_and_gpio():
     ino = (ROOT / "esp32/lab_automation_v2/lab_automation_v2.ino").read_text()
     assert "{33,18,19,21,22,23,25,26,27,32}" in ino
     assert "GPIO 5" not in ino
+    assert "homeassistant/switch/" in ino
     flow = json.loads((ROOT / "node-red/flows.json").read_text())
     assert all("labos/v2/" in node.get("topic", "labos/v2/") or node.get("topic", "") == "" for node in flow if "topic" in node)
 

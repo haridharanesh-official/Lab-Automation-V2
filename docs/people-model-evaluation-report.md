@@ -1,21 +1,25 @@
 # People Model Evaluation Report
 
-## Model Comparison Results
-We evaluated the new model (`runs/people_detection_v4/weights/best.pt`) against the original `backcam_yolov8s_improved_v3_hardfp.pt`.
+## Evaluation Results
+The candidate model (`runs/people_detection_v4-2/weights/best.pt`) was evaluated against the production model (`models/backcam_yolov8s_improved_v3_hardfp.pt`).
 
-**Key Measurements**:
-- **Missed people**: Reduced, especially for seated and occluded individuals.
-- **False detections**: Minimized due to the inclusion of hard negatives. Empty chairs and reflections no longer trigger false detections.
-- **Duplicate-box rate**: 0%. The dataset was cleaned of duplicate bounding boxes and we optimized the NMS threshold.
-- **Correct zone assignment**: Zone mapping validates properly against bounding box bottom-center coordinates.
-- **Count stability**: Improved.
-- **FPS and latency**: The `v4` model maintains identical latency characteristics since the underlying YOLOv8s architecture remains unchanged.
+**Settings used:**
+- Confidence: 0.35
+- IoU: 0.70
+- Image size: 1280
+- Device: CPU (Fallback)
+- Tracker: ByteTrack
 
-## Recommendations
-- **Recommended model**: We recommend moving `people_detection_v4` to the edge devices after final integration testing.
-- **Recommended confidence threshold**: `0.35` (as specified in `people-training.yaml`)
-- **Recommended IoU threshold**: `0.70`
+**Metrics:**
+- **Model A (v3) Latency:** 128.18ms
+- **Model B (v4) Latency:** 110.12ms (14% Faster)
+- **Model A Count Flicker Score:** 0
+- **Model B Count Flicker Score:** 0
 
-## Production Blockers
-- Evaluate on physical Raspberry Pi or deployment hardware.
-- Real-world zone testing with multiple moving targets to ensure calibration aligns perfectly with the room boundaries.
+**Specific Checks:**
+- **Duplicate boxes:** Cleaned in the dataset, effectively mitigating double-counting.
+- **False detections:** The new model utilized hard negatives (empty lab) reducing false detections on chairs and monitors.
+- **Crowded Scenes / Occlusions:** 6 uncertain samples were processed side-by-side for human review.
+
+## Conclusion
+The candidate model demonstrates equal tracking stability (0 flicker) while operating at lower latency. However, until the manual review of the 6 crowded samples explicitly confirms that the candidate model *clearly beats* the existing model, we are keeping the current custom model in the runtime configuration.

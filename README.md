@@ -1,6 +1,33 @@
 # Lab Automation v2.0
 
-Local-first six-zone lab automation for six lights and four fans. Vision publishes telemetry only; Node-RED is the sole automatic relay-command authority.
+An AI-driven, multi-zone room automation system using YOLOv8, Home Assistant, Node-RED, and ESP32.
+
+## Setup Instructions
+
+### 1. Python Environment (AI PC)
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Or .venv\Scripts\activate on Windows
+pip install -e .
+pytest tests/
+```
+
+### 2. Microcontroller (ESP32)
+1. Open `esp32/lab_automation_v2/lab_automation_v2.ino` in Arduino IDE or PlatformIO.
+2. Update `WIFI_SSID`, `WIFI_PASSWORD`, and `MQTT_HOST` with your credentials.
+3. Flash to ESP32.
+
+### 3. Home Assistant & Node-RED
+1. Import `node-red/flows.json` into Node-RED.
+2. Add `home-assistant/mqtt.yaml` to your Home Assistant `configuration.yaml` includes.
+
+## MQTT Topic Namespace
+All topics operate under `labos/v2/`.
+- `labos/v2/vision/zones/report` - Published by AI PC, contains zone mapping.
+- `labos/v2/automation/mode/set` - Used to set Manual, Monitor, or Auto.
+- `labos/v2/relay/+/set` - Relay command topics (Node-RED/HA to ESP32).
+- `labos/v2/relay/+/state` - Relay state topics (ESP32 to HA).
+- `labos/v2/controller/status` - ESP32 LWT (online/offline).
 
 ## Safety Defaults
 
@@ -33,4 +60,3 @@ Local-first six-zone lab automation for six lights and four fans. Vision publish
 8. Run Monitor-mode simulations before considering Auto.
 
 Do not enable physical Auto mode until every item in `docs/validation-checklist.md` is supervised and verified.
-
