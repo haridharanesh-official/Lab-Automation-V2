@@ -26,11 +26,14 @@ Status labels:
 - [x] Verify five-minute continuous live decoding.
 - [x] Record live resolution, codec, FPS, and reconnect behavior.
 - [x] Run five-minute Monitor-safe AI validation on `rtsp://hari:8554/labcam`.
+- [x] Run ten-minute live people-detection validation with annotated video and per-frame CSV/JSONL artifacts.
+- [ ] Harden camera bridge against intermittent `/labcam` `404` periods during upstream interruptions.
 
 ## Room mapping
 - [x] Verified `config/zones.json`.
 - [x] Six-zone polygon mapping works with bottom-centre assignment.
 - [x] Mappings marked provisional until physical tests pass.
+- [ ] Reduce live zone-boundary uncertainty through final supervised calibration.
 
 ## AI publisher
 - [x] Verified one-minute stable reports.
@@ -38,6 +41,7 @@ Status labels:
 - [x] Verified camera failure clears windows and preserves states.
 - [x] Verified unsafe MQTT topics are rejected.
 - [x] Camera retry Monitor validation imported no MQTT client and published zero reports or relay `/set` commands.
+- [x] Ten-minute live model validation used MQTT disabled and published zero relay `/set` commands.
 
 ## Node-RED
 - [ ] Import v2 flow on live Node-RED.

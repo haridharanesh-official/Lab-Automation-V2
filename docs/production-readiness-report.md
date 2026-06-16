@@ -48,6 +48,17 @@ Fresh June 16 retry validation:
 - AI PC five-minute decode: passed with initial HEVC reference-frame warnings only.
 - Monitor-safe AI validation: 7,484 frames over 300.016 seconds, 24.95 FPS, zero decode failures, zero reconnects, zero false-zero reports.
 
+Ten-minute live model validation:
+
+- Model/settings: `backcam_yolov8s_improved_v3_hardfp.pt`, confidence `0.35`, image size `1280`, CUDA `0`, ByteTrack, people class only.
+- Runtime: 600.0 seconds; frames processed: 9,832; average FPS: 16.39.
+- Average inference latency: 13.70 ms; p95 latency: 18.04 ms; peak GPU memory: 188.83 MB.
+- Detection coverage: people in 9,753 frames; 2+ people in 9,701 frames; max people detected: 7.
+- Duplicate-box frames: 9, duplicate rate: 0.0915%.
+- False-zero events: 7.
+- Decode failures: 1; reconnect attempts/events: 40.
+- Result: live vision ran for the requested duration, but intermittent RTSP `404` periods and camera bridge restarts remain a camera stability blocker.
+
 ## MQTT Readiness
 
 Status: Partially verified
@@ -58,6 +69,7 @@ Status: Partially verified
 - Relay `/set` commands observed during Monitor test: 0
 - AI publishes outside `labos/v2/vision/#`: not observed
 - Camera retry Monitor validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
+- Ten-minute live model validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 
 ## ESP32 Readiness
 
@@ -94,6 +106,7 @@ Status: Hardware deployment pending
 - Existing `config/zones.json` is provisional.
 - Approximate zone centers map uniquely in software.
 - Shared boundary ambiguity is documented.
+- Ten-minute live model validation saw 59.20% zone-boundary uncertainty with the provisional grid.
 - Door, seated people, occlusion, and real boundaries are not physically verified.
 - Do not update final zone configuration until supervised live validation passes.
 
@@ -117,6 +130,7 @@ Status: Hardware deployment pending
 ## Remaining Blockers
 
 - Keep monitoring `/labcam` bridge stability after upstream interruptions.
+- Harden the camera bridge so upstream interruptions do not produce intermittent `/labcam` `404` periods.
 - Deploy/import and verify the v2 Node-RED flow.
 - Verify ESP32 firmware on real hardware.
 - Verify Home Assistant entities.
