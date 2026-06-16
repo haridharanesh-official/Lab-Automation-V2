@@ -32,7 +32,6 @@ Observed on MQTT:
 - `lab/automation/mode = manual`
 - `lab/automation/mode_state = manual`
 - `lab/automation/mode = auto`
-- `lab/automation/mode_state = auto`
 - `lab/automation/mode = manual`
 - `lab/automation/mode_state = manual`
 
@@ -67,16 +66,16 @@ The deployed `labos` flow processed the live AI telemetry:
 - `lab/automation/vision_age_seconds` updated to `0`
 - `lab/automation/zero_shutdown_remaining_seconds` counted down during Auto mode
 
-This confirms the Auto path was active and consuming live AI data.
+This confirms the deployed flow continued consuming live AI data.
 
 ## Relay Commands And State Feedback
 
 - Relay `/set` commands observed during Manual mode: `0`
-- Relay `/set` commands observed during the supervised Auto window: `0`
+- Relay `/set` commands observed during the supervised Auto attempt: `0`
 - Relay state feedback remained visible on `lab/control/+/state`
 - All observed relay states during this pass remained `OFF`
 
-Because all observed AI counts were zero, Auto mode never had a valid occupied-stage trigger to issue relay commands. As a result, this run does **not** verify real ON/OFF relay behavior, light/fan mapping, or repeated-command/flicker behavior under occupied scenes.
+Because the supervised Auto attempt did not produce any live relay `/set` traffic, this run does **not** verify real ON/OFF relay behavior, light/fan mapping, or repeated-command/flicker behavior under occupied scenes. The current blocker is that `lab/automation/mode` accepted `auto`, but the live runtime did not emit a confirming `lab/automation/mode_state = auto` update or any Auto relay activity during the staged count test.
 
 ## Camera/Failure Safety Observations
 
@@ -89,15 +88,18 @@ Because all observed AI counts were zero, Auto mode never had a valid occupied-s
 This supervised run verified:
 
 - live AI publisher to deployed Node-RED Auto path works
-- Auto mode can be entered and exited safely
+- Manual mode remained safe
+- Monitor mode produced intended states with zero relay commands
+- manual override capture and clear worked
 - final mode returned to Manual
-- zero-count Auto handling did not emit unsafe relay commands
+- the Auto attempt did not emit unsafe relay commands
 
-This supervised run did **not** complete final hardware validation because the required staged occupied-scene cases were not observed. Physical production readiness remains blocked on:
+This supervised run did **not** complete final hardware validation because the Auto transition was not proven active on the deployed runtime. Physical production readiness remains blocked on:
 
-- one-person occupied test
-- two-to-three-person occupied test
-- four-or-more-person occupied test if supported by the room
+- fixing or explaining the live `mode -> auto` / `mode_state` mismatch on `labos`
+- one-person occupied Auto test
+- two-to-three-person occupied Auto test
+- four-or-more-person occupied Auto test if supported by the room
 - real relay/light/fan mapping confirmation
 - repeated-command and flicker observation under real load changes
 - camera interruption behavior under supervised Auto mode

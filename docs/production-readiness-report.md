@@ -156,10 +156,12 @@ Status: Hardware deployment pending
 Status: Not physically production-ready until supervised relay validation passes
 
 - A short supervised Auto-mode entry/exit safety check was completed against the deployed `labos` flow.
-- Auto mode entered successfully and was returned to Manual successfully.
-- During that short run, live AI samples remained at zero count, so Node-RED emitted zero relay `/set` commands.
-- Physical Zone 1-6 occupied tests were not run successfully in that pass because no occupied scenes were captured.
-- Multiple-zone occupied tests were not run successfully in that pass.
+- In the latest supervised check, `lab/automation/mode` accepted `auto`, but the live runtime did not emit a confirming `lab/automation/mode_state = auto` update or any relay `/set` activity during staged count testing.
+- Final mode was returned to `manual` successfully.
+- Manual baseline stayed safe, Monitor mode produced intended states, and manual override capture/clear worked.
+- The supervised Auto attempt emitted zero relay `/set` commands.
+- Physical Zone 1-6 occupied Auto tests were not completed successfully because active Auto relay behavior was not observed.
+- Multiple-zone occupied Auto tests were not completed successfully.
 - Real relay/light/fan switching behavior, repeated-command behavior, and flicker behavior remain unverified on hardware.
 
 ## Failure-Test Readiness
@@ -174,7 +176,7 @@ Status: Hardware deployment pending
 
 - Keep monitoring the hardened `/labcam` bridge and health-check timer during longer unattended runs.
 - Reduce or eliminate upstream HEVC reference-frame decode warnings if they affect downstream analytics.
-- Deploy/import and verify the v2 Node-RED flow.
+- Resolve the live `lab/automation/mode` to active Auto behavior mismatch on `labos`.
 - Verify ESP32 firmware on real hardware.
 - Verify Home Assistant entities.
 - Complete supervised manual relay mapping.

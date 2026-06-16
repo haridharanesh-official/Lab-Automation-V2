@@ -89,6 +89,7 @@ Status labels:
 - [x] Static validation passed.
 - [x] Validate live AI -> MQTT -> deployed Node-RED Manual-mode path.
 - [x] Validate live simulation-only priority-safety path with final mode returned to Manual.
+- [ ] Resolve live `lab/automation/mode` to active Auto behavior mismatch on `labos`.
 - [ ] Complete full supervised Auto-mode validation with occupied-scene relay changes.
 - [x] Complete supervised Auto-mode entry/exit safety check with final mode returned to Manual.
 - [ ] Complete live failure tests.
