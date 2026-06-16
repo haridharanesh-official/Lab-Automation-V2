@@ -78,3 +78,32 @@ rtsp://hari:8554/labcam -> 404 Not Found
 ```
 
 Five-minute continuous decoding, codec, resolution, FPS, and reconnect behavior remain unverified until the upstream camera is reachable.
+
+## Fresh Validation: June 16, 2026
+
+Scope: camera/RTSP/MediaMTX only. No MQTT relay topics, Node-RED flows, ESP32, Home Assistant controls, Auto mode, camera reboot, or camera reconfiguration were touched.
+
+Read-only checks from `hari`:
+
+- Active IPs: `eth0` is `172.16.3.31/20`; `tailscale0` is `100.66.172.14/32`; `wlan0` is down.
+- Routes: default route via `172.16.3.1`; direct route only for `172.16.0.0/20`.
+- `ping 192.168.5.110`: 100% packet loss.
+- `nc -vz 192.168.5.110 554`: timeout.
+- `nc -vz 192.168.5.110 8554`: timeout.
+- `ffprobe` against the configured upstream RTSP URL: no stream metadata returned.
+- ffmpeg bridge socket: stuck in `SYN-SENT` from `172.16.3.31` to `192.168.5.110:8554`.
+
+MediaMTX state:
+
+- `mediamtx.service`: active and listening on `:8554`, `:8888`, and `:8889`.
+- `labos-camera-bridge.service`: active but not publishing because upstream connection cannot complete.
+- `paths.labcam.source`: `publisher`.
+- Local `ffprobe rtsp://127.0.0.1:8554/labcam`: `404 Not Found`.
+
+AI PC checks:
+
+- `rtsp://hari:8554/labcam`: did not open; `404 Not Found`.
+- 60-second decode: skipped because the stream did not open.
+- Codec, resolution, FPS, dropped frames, and latency: unavailable until the stream opens.
+
+Exact failing hop: network route/reachability from `hari` and the AI PC to upstream camera `192.168.5.110`, not the MediaMTX path definition.

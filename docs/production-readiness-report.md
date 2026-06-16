@@ -38,6 +38,8 @@ Root cause found on camera Pi: MediaMTX is running, but `/labcam` has no active 
 
 Detailed troubleshooting is recorded in `docs/camera-stream-troubleshooting.md`.
 
+Fresh June 16 validation confirms the failing hop is upstream network reachability: `hari` cannot ping `192.168.5.110`, `nc` to ports `554` and `8554` times out, and the ffmpeg bridge remains in `SYN-SENT` to `192.168.5.110:8554`.
+
 ## MQTT Readiness
 
 Status: Partially verified

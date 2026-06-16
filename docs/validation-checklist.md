@@ -19,6 +19,8 @@ Status labels:
 - [ ] Restore working RTSP `/labcam`.
 - [x] Confirmed MediaMTX is running on `hari` and `labcam` path is configured.
 - [x] Confirmed upstream camera `192.168.5.110` is unreachable from `hari`.
+- [x] Confirmed `/labcam` has no active publisher while upstream camera is unreachable.
+- [x] Confirmed AI PC cannot decode `rtsp://hari:8554/labcam` while `/labcam` returns `404`.
 - [ ] Verify five-minute continuous live decoding.
 - [ ] Record live resolution, codec, FPS, and reconnect behavior.
 
