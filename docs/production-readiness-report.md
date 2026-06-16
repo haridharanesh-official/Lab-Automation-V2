@@ -36,6 +36,8 @@ Status: Hardware deployment pending
 
 Root cause found on camera Pi: MediaMTX is running, but `/labcam` has no active publisher because the upstream physical camera source at `192.168.5.110:8554` is unreachable from `hari`.
 
+Detailed troubleshooting is recorded in `docs/camera-stream-troubleshooting.md`.
+
 ## MQTT Readiness
 
 Status: Partially verified

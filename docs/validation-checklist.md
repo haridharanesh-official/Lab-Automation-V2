@@ -17,6 +17,8 @@ Status labels:
 - [x] Keep `backcam_yolov8s_improved_v3_hardfp.pt` as production-safe model.
 - [x] Validated candidate against duplicate boxes, missed people, false positives, etc.
 - [ ] Restore working RTSP `/labcam`.
+- [x] Confirmed MediaMTX is running on `hari` and `labcam` path is configured.
+- [x] Confirmed upstream camera `192.168.5.110` is unreachable from `hari`.
 - [ ] Verify five-minute continuous live decoding.
 - [ ] Record live resolution, codec, FPS, and reconnect behavior.
 
