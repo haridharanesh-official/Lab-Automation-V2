@@ -83,5 +83,6 @@ Status labels:
 - [x] Run all existing tests.
 - [x] Static validation passed.
 - [x] Validate live AI -> MQTT -> deployed Node-RED Manual-mode path.
-- [ ] Complete supervised Auto-mode validation.
+- [ ] Complete full supervised Auto-mode validation with occupied-scene relay changes.
+- [x] Complete supervised Auto-mode entry/exit safety check with final mode returned to Manual.
 - [ ] Complete live failure tests.

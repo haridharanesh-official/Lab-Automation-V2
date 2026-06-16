@@ -148,10 +148,12 @@ Status: Hardware deployment pending
 
 Status: Not physically production-ready until supervised relay validation passes
 
-- Auto mode was not enabled.
-- Physical Zone 1-6 tests were not run.
-- Multiple-zone tests were not run.
-- Flicker and duplicate-command behavior were validated in software only, not on hardware.
+- A short supervised Auto-mode entry/exit safety check was completed against the deployed `labos` flow.
+- Auto mode entered successfully and was returned to Manual successfully.
+- During that short run, live AI samples remained at zero count, so Node-RED emitted zero relay `/set` commands.
+- Physical Zone 1-6 occupied tests were not run successfully in that pass because no occupied scenes were captured.
+- Multiple-zone occupied tests were not run successfully in that pass.
+- Real relay/light/fan switching behavior, repeated-command behavior, and flicker behavior remain unverified on hardware.
 
 ## Failure-Test Readiness
 
