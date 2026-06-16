@@ -35,6 +35,7 @@ Status labels:
 - [x] Six-zone polygon mapping works with bottom-centre assignment.
 - [x] Applied rough slanted perspective zones from the user-marked back-camera reference.
 - [x] Corrected Zone 1/Zone 2 split so Zone 1 remains bottom-right and Zone 2 owns bottom-middle.
+- [x] Filled the bottom-right empty area into Zone 1 with a clean shared Zone 1/Zone 2 boundary.
 - [x] Mappings marked provisional until physical tests pass.
 - [ ] Reduce live zone-boundary uncertainty through final supervised calibration.
 

@@ -1,8 +1,8 @@
 {
   "note": "Rough slanted perspective calibration from user-marked live back-camera reference, June 16 2026. Zone numbering: bottom row right-to-left is 1,2,3; top row right-to-left is 4,5,6. Still provisional until supervised physical calibration.",
   "zones": [
-    [[790, 303], [1262, 598], [1280, 720], [1120, 720]],
-    [[470, 448], [790, 303], [1120, 720], [780, 720]],
+    [[790, 303], [1262, 598], [1280, 720], [900, 720]],
+    [[470, 448], [790, 303], [900, 720], [780, 720]],
     [[0, 660], [172, 582], [470, 448], [780, 720], [0, 720]],
     [[304, 0], [628, 202], [790, 303], [958, 228], [1280, 83], [1280, 0]],
     [[0, 47], [290, 294], [470, 448], [790, 303], [628, 202], [304, 0]],

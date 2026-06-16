@@ -117,6 +117,7 @@ Status: Hardware deployment pending
 - Existing `config/zones.json` now uses rough slanted perspective polygons from the user-marked back-camera reference.
 - Zone numbering matches the reference: bottom row right-to-left is Zones 1, 2, 3; top row right-to-left is Zones 4, 5, 6.
 - Zone 1/Zone 2 split was corrected so Zone 1 remains the bottom-right wedge and Zone 2 owns the bottom-middle table area.
+- The bottom-right empty area was filled into Zone 1 with a clean shared Zone 1/Zone 2 boundary.
 - Approximate zone centers and sample foot-points map uniquely in software.
 - Shared boundary ambiguity is documented.
 - Ten-minute live model validation saw 59.20% zone-boundary uncertainty with the provisional grid.
