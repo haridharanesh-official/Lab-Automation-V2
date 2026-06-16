@@ -10,6 +10,11 @@ The current repo flow for the `labos` runtime is designed around this strict ord
 2. Timetable fallback
 3. Healthy people-count automation
 
+`mode_state` is separate from the decision source:
+
+- `manual`, `monitor`, `auto` describe the user-selected operating mode
+- `priority_state` describes why the controller is making, or not making, decisions
+
 Node-RED alone may publish relay commands. The AI PC publishes only `lab/vision/...` telemetry and is blocked from control, relay, `/set`, and `/command` topics.
 
 ## MQTT Topics Used
@@ -63,6 +68,24 @@ Notes:
 - `mode_state` is published as a retained diagnostic message and may also be republished on later ticks
 - when validating transitions, ignore stale retained history and capture fresh events after subscribing
 
+## Mode And Stale Vision Behavior
+
+The flow now keeps the selected mode and the decision source separate:
+
+- If the user selects `auto`, `lab/automation/mode_state` stays `auto`
+- stale or unhealthy vision does **not** force `mode_state` back to `manual`
+- stale or unhealthy vision changes only the decision source reported by `lab/automation/priority_state`
+
+Current `priority_state` meanings:
+
+- `MANUAL`
+- `MANUAL_OVERRIDE`
+- `MONITOR`
+- `PEOPLE_COUNT`
+- `TIMETABLE_FALLBACK`
+- `TIMETABLE_HOLD`
+- `VISION_STALE`
+
 ## Manual Override
 
 Manual override has the highest priority.
@@ -104,6 +127,12 @@ Behavior outside fallback windows:
 - do not turn everything OFF immediately
 - preserve the last known automation state first
 - allow OFF only after the configured safe delay
+
+When mode is `auto` and vision becomes stale or unhealthy:
+
+- `mode_state` remains `auto`
+- `priority_state` moves to `TIMETABLE_FALLBACK`, `TIMETABLE_HOLD`, or `VISION_STALE`
+- people count is ignored until vision is healthy again
 
 ## People-Count Automation
 

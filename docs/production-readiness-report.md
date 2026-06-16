@@ -129,6 +129,7 @@ Status: Hardware deployment pending
 - Healthy people-count path was verified live in Monitor mode through `intended_state` output with zero relay commands.
 - Inside-window timetable fallback still needs a live validation pass during an active class window.
 - Follow-up debug confirmed the correct live mode command is plain retained string payloads on `lab/automation/mode` such as `auto`; the earlier failed Auto confirmation was caused by reading the stale retained `mode_state=manual` message before the fresh `mode_state=auto` event arrived.
+- A later live validation confirmed that stale or unhealthy vision does not force `mode_state` back to `manual`; `mode_state` stayed `auto` while `priority_state` moved through `VISION_STALE` and `TIMETABLE_HOLD`.
 - Empty-lab stability validation later confirmed that repeated `stable_count = 0` is the correct result for the currently empty room and not evidence of a failed model.
 
 ## Home Assistant Readiness

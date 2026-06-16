@@ -1,6 +1,6 @@
 # Current Status
 
-**Date**: June 16, 2026
+**Date**: June 17, 2026
 
 ## Overview
 Lab Automation v2.0 is currently in the **validation phase**. Software validation is complete, and the Node-RED priority safety flow is deployed on the `labos` runtime.
@@ -12,7 +12,8 @@ Lab Automation v2.0 is currently in the **validation phase**. Software validatio
   - 0 false positives
   - 0 relay `/set` commands issued
 - **Tests**: 23/23 tests passing.
-- **Node-RED**: Strict priority-safety flow deployed on `labos`, consuming `lab/...` topics. Auto mode activation confirmed to work.
+- **Node-RED**: Strict priority-safety flow deployed on `labos`, consuming `lab/...` topics.
+- **Mode Handling**: Auto selection now stays `auto` even when vision becomes stale; stale vision changes only `priority_state` to timetable fallback/hold behavior.
 
 ## Safe Mode Enforcements
 - **Final Safe Mode**: `manual`. The system returns to this mode upon any deployment or recovery.

@@ -61,6 +61,8 @@ Status labels:
 - [x] Verified Manual mode emits zero relay `/set` commands during live AI publishing.
 - [x] Repo flow now models priority order: manual override > timetable fallback > healthy people-count automation.
 - [x] Repo flow now documents manual override clear topic and timetable fallback windows.
+- [x] Verified stale or unhealthy vision no longer forces `mode_state` back to `manual`.
+- [x] Verified `auto` + stale vision keeps `mode_state = auto` and moves `priority_state` to fallback behavior.
 - [x] Verified live `lab/...` diagnostics after deployment: `mode_state`, `manual_override_state`, `priority_state`, `vision_health`, `warning`, `intended_state`.
 - [x] Verified live outside-window fallback behavior lands on `TIMETABLE_HOLD` with zero relay `/set` commands.
 - [x] Verified live manual override capture and clear on `labos`.

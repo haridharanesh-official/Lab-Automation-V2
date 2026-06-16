@@ -116,6 +116,12 @@ def test_artifacts_enforce_namespace_and_gpio():
     assert "String(msg.payload).trim().toLowerCase()" in func
     assert "['manual','monitor','auto'].includes(next)" in func
     assert "diagnostics.push(m('lab/automation/mode_state',value,true))" in func
+    assert "decisionSource:'PEOPLE_COUNT'" in func
+    assert "decisionSource:'TIMETABLE_FALLBACK'" in func
+    assert "decisionSource:'TIMETABLE_HOLD'" in func
+    assert "decisionSource:'VISION_STALE'" in func
+    assert "hasManualOverrides()" in func
+    assert "decision_source:target.decisionSource" in func
 
 
 def test_vision_publisher_rejects_unsafe_topics_before_client_publish():
@@ -242,6 +248,33 @@ def test_priority_controller_healthy_people_count_drives_automation():
     assert first["stage"] == "STABILIZING"
     assert second["stage"] == "STABILIZING"
     assert third["stage"] == "TWO_THREE"
+
+
+def test_priority_controller_auto_stale_vision_keeps_mode_and_uses_fallback():
+    controller = PrioritySafetyController(mode="auto")
+    controller.mark_service_status("offline")
+    controller.mark_source_status("unhealthy")
+    now = datetime(2026, 6, 16, 9, 0, 0)
+    result = controller.process_people_count({}, now)
+    assert controller.mode == "auto"
+    assert result["stage"] == "TIMETABLE_FALLBACK"
+    assert result["commands"] != []
+
+
+def test_priority_controller_manual_and_monitor_stale_emit_no_commands():
+    manual = PrioritySafetyController(mode="manual")
+    manual.mark_service_status("offline")
+    manual.mark_source_status("unhealthy")
+    monitor = PrioritySafetyController(mode="monitor")
+    monitor.mark_service_status("offline")
+    monitor.mark_source_status("unhealthy")
+    now = datetime(2026, 6, 16, 18, 0, 0)
+    manual_result = manual.process_people_count({}, now)
+    monitor_result = monitor.process_people_count({}, now)
+    assert manual.mode == "manual"
+    assert monitor.mode == "monitor"
+    assert manual_result["commands"] == []
+    assert monitor_result["commands"] == []
 
 
 def test_fallback_window_helper():
