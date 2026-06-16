@@ -26,19 +26,27 @@ Status: Software validation complete
 
 ## Camera Readiness
 
-Status: Hardware deployment pending
+Status: Camera stream restored; hardware deployment pending
 
 - RTSP service port on `hari:8554`: reachable
 - Stream URL tested: `rtsp://hari:8554/labcam`
-- Result: failed, `404 Not Found`
-- Five-minute continuous decoding: not passed
-- Resolution, codec, FPS, reconnect behavior: not verified
+- Result: working after restarting only `labos-camera-bridge.service`
+- Five-minute continuous decoding: passed on AI PC
+- Resolution: `1280x720`
+- Codec: HEVC/H.265
+- FPS: `25`
+- Reconnect behavior during validation: no reconnects observed
 
-Root cause found on camera Pi: MediaMTX is running, but `/labcam` has no active publisher because the upstream physical camera source at `192.168.5.110:8554` is unreachable from `hari`.
+Root cause found on camera Pi: the college/network fix restored reachability from `hari` to upstream camera `192.168.5.110:8554`, but the ffmpeg bridge remained stale after its earlier upstream failure. MediaMTX was healthy and `paths.labcam.source` was still `publisher`; restarting only `labos-camera-bridge.service` restored `/labcam`.
 
 Detailed troubleshooting is recorded in `docs/camera-stream-troubleshooting.md`.
 
-Fresh June 16 validation confirms the failing hop is upstream network reachability: `hari` cannot ping `192.168.5.110`, `nc` to ports `554` and `8554` times out, and the ffmpeg bridge remains in `SYN-SENT` to `192.168.5.110:8554`.
+Fresh June 16 retry validation:
+
+- `hari` to `192.168.5.110`: ping passed, port `8554` open, port `80` open, port `554` refused.
+- AI PC `ffprobe rtsp://hari:8554/labcam`: passed.
+- AI PC five-minute decode: passed with initial HEVC reference-frame warnings only.
+- Monitor-safe AI validation: 7,484 frames over 300.016 seconds, 24.95 FPS, zero decode failures, zero reconnects, zero false-zero reports.
 
 ## MQTT Readiness
 
@@ -49,6 +57,7 @@ Status: Partially verified
 - Simulated vision report under `labos/v2/vision/#`: succeeded
 - Relay `/set` commands observed during Monitor test: 0
 - AI publishes outside `labos/v2/vision/#`: not observed
+- Camera retry Monitor validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 
 ## ESP32 Readiness
 
@@ -107,7 +116,7 @@ Status: Hardware deployment pending
 
 ## Remaining Blockers
 
-- Restore `/labcam` by fixing upstream camera reachability from `hari`.
+- Keep monitoring `/labcam` bridge stability after upstream interruptions.
 - Deploy/import and verify the v2 Node-RED flow.
 - Verify ESP32 firmware on real hardware.
 - Verify Home Assistant entities.

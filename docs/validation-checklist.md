@@ -16,13 +16,16 @@ Status labels:
 ## Vision and model
 - [x] Keep `backcam_yolov8s_improved_v3_hardfp.pt` as production-safe model.
 - [x] Validated candidate against duplicate boxes, missed people, false positives, etc.
-- [ ] Restore working RTSP `/labcam`.
+- [x] Restore working RTSP `/labcam`.
 - [x] Confirmed MediaMTX is running on `hari` and `labcam` path is configured.
 - [x] Confirmed upstream camera `192.168.5.110` is unreachable from `hari`.
 - [x] Confirmed `/labcam` has no active publisher while upstream camera is unreachable.
 - [x] Confirmed AI PC cannot decode `rtsp://hari:8554/labcam` while `/labcam` returns `404`.
-- [ ] Verify five-minute continuous live decoding.
-- [ ] Record live resolution, codec, FPS, and reconnect behavior.
+- [x] Confirmed restored upstream reachability from `hari` to `192.168.5.110:8554`.
+- [x] Restarted only stale `labos-camera-bridge.service`; no camera, relay, ESP32, Node-RED, Home Assistant, or Auto-mode changes.
+- [x] Verify five-minute continuous live decoding.
+- [x] Record live resolution, codec, FPS, and reconnect behavior.
+- [x] Run five-minute Monitor-safe AI validation on `rtsp://hari:8554/labcam`.
 
 ## Room mapping
 - [x] Verified `config/zones.json`.
@@ -34,6 +37,7 @@ Status labels:
 - [x] Verified 10-second heartbeat.
 - [x] Verified camera failure clears windows and preserves states.
 - [x] Verified unsafe MQTT topics are rejected.
+- [x] Camera retry Monitor validation imported no MQTT client and published zero reports or relay `/set` commands.
 
 ## Node-RED
 - [ ] Import v2 flow on live Node-RED.
