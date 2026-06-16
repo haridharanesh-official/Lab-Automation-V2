@@ -47,6 +47,8 @@ Status labels:
 - [x] Verified 10-second heartbeat.
 - [x] Verified camera failure clears windows and preserves states.
 - [x] Verified unsafe MQTT topics are rejected.
+- [x] Retargeted AI PC live publisher defaults to `lab/vision/people_count`, `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/heartbeat`.
+- [x] Confirmed AI publisher still refuses `lab/control/#`, relay, `/set`, and `/command` topics.
 - [x] Camera retry Monitor validation imported no MQTT client and published zero reports or relay `/set` commands.
 - [x] Ten-minute live model validation used MQTT disabled and published zero relay `/set` commands.
 - [x] Ten-minute live people-count validation used MQTT disabled and published zero relay `/set` commands.

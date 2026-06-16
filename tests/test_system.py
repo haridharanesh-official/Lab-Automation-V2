@@ -72,8 +72,9 @@ def test_two_empty_reports_and_failure_preserves_states():
 
 
 def test_topic_safety_and_reconnect_window_clear():
-    assert_vision_topic_safe("labos/v2/vision/zones/report")
-    for unsafe in ("labos/v2/relay/1/set", "labos/v2/vision/relay/set", "legacy/vision/status"):
+    assert_vision_topic_safe("lab/vision/people_count")
+    assert_vision_topic_safe("lab/vision/source_status")
+    for unsafe in ("lab/control/relay1/set", "lab/vision/relay/set", "legacy/vision/status"):
         try:
             assert_vision_topic_safe(unsafe)
             assert False
@@ -109,15 +110,41 @@ def test_vision_publisher_rejects_unsafe_topics_before_client_publish():
 
     client = FakeClient()
     publisher = VisionPublisher(client)
-    publisher.publish("labos/v2/vision/status", "healthy")
+    publisher.publish("lab/vision/status", "healthy")
     assert len(client.calls) == 1
-    for unsafe in ("labos/v2/relay/1/set", "labos/v2/control/set", "labos/v2/vision/command"):
+    for unsafe in ("lab/control/relay/1/set", "lab/control/set", "lab/vision/command"):
         try:
             publisher.publish(unsafe, "ON")
             assert False
         except ValueError:
             pass
     assert len(client.calls) == 1
+
+
+def test_vision_publisher_serializes_live_people_count_payload():
+    class FakeClient:
+        def __init__(self):
+            self.calls = []
+
+        def publish(self, *args, **kwargs):
+            self.calls.append((args, kwargs))
+
+    payload = {
+        "publisher": "labvision-ai-pc",
+        "timestamp": 1234567890,
+        "total_count": 2,
+        "stable_count": 2,
+        "zone_counts": [1, 1, 0, 0, 0, 0],
+        "source_healthy": True,
+        "status": "online",
+    }
+    client = FakeClient()
+    VisionPublisher(client).publish("lab/vision/people_count", payload)
+    assert len(client.calls) == 1
+    args, kwargs = client.calls[0]
+    assert args[0] == "lab/vision/people_count"
+    assert json.loads(args[1]) == payload
+    assert kwargs["qos"] == 1
 
 
 def test_all_requested_monitor_scenarios_send_zero_commands():

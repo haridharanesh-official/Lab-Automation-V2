@@ -8,7 +8,9 @@ Date: June 16, 2026
 - Hardware deployment pending
 - Not physically production-ready until supervised relay validation passes
 
-Scope: live camera and AI model only. Auto mode, ESP32 firmware, physical relays, Home Assistant controls, and Node-RED deployment were not touched. MQTT publishing was disabled, and no relay `/set` commands were published.
+Scope: live camera and AI model only. Auto mode, ESP32 firmware, physical relays, Home Assistant controls, and Node-RED deployment were not touched. Earlier validation runs used MQTT disabled and published no relay `/set` commands.
+
+Deployment update: the current `labos` Raspberry Pi runtime consumes `lab/vision/...` topics rather than the earlier repo draft `labos/v2/vision/...` namespace. The AI PC publisher is now aligned to publish only `lab/vision/people_count`, `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/heartbeat`, while still refusing all relay/control/set/command topics.
 
 ## Settings
 
@@ -83,9 +85,9 @@ Zone assignment was reasonable as a software exercise, but the current polygons 
 
 ## Safety Result
 
-- MQTT enabled: `false`
-- Vision-only MQTT topics published: `0`
-- Relay `/set` commands published: `0`
+- MQTT enabled during this validation run: `false`
+- Vision-only MQTT topics published during this validation run: `0`
+- Relay `/set` commands published during this validation run: `0`
 - Auto mode enabled: `false`
 
 ## Result

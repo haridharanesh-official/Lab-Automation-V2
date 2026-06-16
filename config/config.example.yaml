@@ -1,6 +1,6 @@
 mode: monitor
 camera:
-  url: rtsp://USERNAME:PASSWORD@CAMERA_IP/stream
+  url: rtsp://hari:8554/labcam
   reconnect_seconds: 5
 model:
   path: models/backcam_yolov8s_improved_v3_hardfp.pt
@@ -9,7 +9,8 @@ model:
   device: 0
   tracker: bytetrack.yaml
 mqtt:
-  host: localhost
+  enabled: true
+  host: labos
   port: 1883
   username: ""
   password: ""

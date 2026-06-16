@@ -1,11 +1,24 @@
 # MQTT Topics
 
-All topics are isolated below `labos/v2/`.
+Current deployed Lab Automation v2.0 runtime on `labos` uses the `lab/...` namespace for AI vision telemetry.
 
-- Vision: `vision/status`, `vision/heartbeat`, `vision/zones/report`, `vision/zone/{1..6}/count`
-- Automation: `automation/mode/set`, `automation/mode/state`, `automation/status`, `automation/decision`, `automation/warning`
-- Relay: `relay/{1..10}/set`, `relay/{1..10}/state`
-- Controller: `controller/status`
+- AI PC publishes only:
+  - `lab/vision/people_count`
+  - `lab/vision/status`
+  - `lab/vision/source_status`
+  - `lab/vision/heartbeat`
 
-Rules: vision may publish only under `labos/v2/vision/#`; relay `/set` commands must never be retained; Node-RED alone may automatically publish `/set`; retained mode state defaults to Manual.
+- Current deployed `labos` Node-RED flow consumes:
+  - `lab/vision/people_count`
+  - `lab/vision/status`
+  - `lab/vision/source_status`
+  - `lab/vision/heartbeat`
 
+- AI PC is blocked from publishing:
+  - `lab/control/#`
+  - `lab/control/+/set`
+  - any topic containing `/relay/`
+  - any topic containing `/set`
+  - any topic containing `/command`
+
+Rules: AI may publish only under `lab/vision/#`; AI must never publish control or relay topics; Node-RED alone may publish physical relay commands.

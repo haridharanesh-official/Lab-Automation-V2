@@ -14,9 +14,10 @@ Lab Automation v2.0 must not be described as physically production-ready until l
 
 Status: Software validation complete
 
-- Local tests: 11 passed
+- Local tests: 18 passed
 - Dependencies: no broken requirements
 - AI publisher safety: refuses relay/control/set/command topics
+- Live deployment contract update: AI telemetry now targets `lab/vision/...` topics consumed by the current `labos` Node-RED runtime.
 - Monitor-mode software tests: zero relay commands
 - Relay mapping logic and fan OR rules: validated in tests
 - Two-empty-report shutdown: validated in tests
@@ -86,10 +87,12 @@ Ten-minute live people-count validation:
 Status: Partially verified
 
 - Broker `labos:1883`: reachable
-- Safe Monitor-mode publish: succeeded
-- Simulated vision report under `labos/v2/vision/#`: succeeded
+- Safe Monitor-mode publish path updated to `lab/vision/...`
+- Short live AI publish verification to `lab/vision/...`: passed
+- Exact topics observed from AI: `lab/vision/people_count`, `lab/vision/status`, `lab/vision/source_status`, `lab/vision/heartbeat`
+- Observed `lab/control/+/set` publishes from AI during verification: 0
 - Relay `/set` commands observed during Monitor test: 0
-- AI publishes outside `labos/v2/vision/#`: not observed
+- AI publishes outside approved vision topics: not observed in tests
 - Camera retry Monitor validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 - Ten-minute live model validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 - Ten-minute live people-count validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
@@ -110,7 +113,7 @@ Status: Hardware deployment pending
 
 Status: Hardware deployment pending
 
-- Importable v2 flow exists.
+- Importable repo v2 flow exists, but deployed `labos` runtime currently consumes `lab/...` AI topics instead of the earlier repo draft `labos/v2/...` topic plan.
 - Expected default mode is Manual.
 - Live broker Monitor test produced zero relay `/set` commands.
 - No `labos/v2/automation/decision` response was observed after a simulated report, indicating the v2 flow/controller is not currently verified as deployed and active.
