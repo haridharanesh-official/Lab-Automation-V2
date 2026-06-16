@@ -122,3 +122,42 @@ Armed capture also showed that live Auto relay commands were being missed by the
   - `lab/control/relay8/set OFF`
 
 This means the live flow was active in Auto during the debug run; the earlier zero-command result was a measurement issue, not proof that Auto was inactive. Physical occupied-scene validation still remains pending.
+
+## Supervised Occupied-Scene Auto Attempt
+
+Date: June 16, 2026
+
+An additional supervised occupied-scene Auto validation was run with fresh MQTT capture armed before the mode switch.
+
+Observed:
+
+- fresh `lab/automation/mode_state = auto` confirmation appeared during the run
+- final mode returned to `manual`
+- live AI publisher remained limited to `lab/vision/#`
+
+Captured people-count samples during the supervised window all remained:
+
+```json
+{
+  "stable_count": 0,
+  "total_count": 0,
+  "zone_counts": [0, 0, 0, 0, 0, 0],
+  "source_healthy": true,
+  "status": "online"
+}
+```
+
+Because the AI publisher never reported a non-zero stable count during that supervised run:
+
+- no `lab/automation/intended_state` scene transitions were captured
+- no relay `/set` commands were captured
+- no relay feedback changes were captured
+
+Result:
+
+- Auto control path was confirmed active through fresh `mode_state = auto`
+- occupied-scene validation was **not** achieved because the live camera/model path did not produce non-zero people counts during the staged test window
+
+Remaining blocker for final physical validation:
+
+- reproduce the occupied scenes in the actual camera field of view so the live model reports non-zero stable counts during Auto mode

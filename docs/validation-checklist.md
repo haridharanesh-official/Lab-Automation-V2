@@ -91,5 +91,6 @@ Status labels:
 - [x] Validate live simulation-only priority-safety path with final mode returned to Manual.
 - [ ] Resolve live `lab/automation/mode` to active Auto behavior mismatch on `labos`.
 - [ ] Complete full supervised Auto-mode validation with occupied-scene relay changes.
+- [ ] Complete supervised occupied-scene Auto validation with non-zero stable counts observed on live `lab/vision/people_count`.
 - [x] Complete supervised Auto-mode entry/exit safety check with final mode returned to Manual.
 - [ ] Complete live failure tests.

@@ -164,6 +164,8 @@ Status: Not physically production-ready until supervised relay validation passes
 - Physical Zone 1-6 occupied Auto tests were not completed successfully because active Auto relay behavior was not observed.
 - Multiple-zone occupied Auto tests were not completed successfully.
 - Real relay/light/fan switching behavior, repeated-command behavior, and flicker behavior remain unverified on hardware.
+- Follow-up live debug confirmed `lab/automation/mode = auto` is correct and fresh `lab/automation/mode_state = auto` does publish when captured correctly.
+- In the subsequent supervised occupied-scene Auto attempt, fresh `mode_state = auto` was observed, but the AI stream still reported only `stable_count = 0`, so no intended-state scene transitions or relay commands were triggered.
 
 ## Failure-Test Readiness
 
