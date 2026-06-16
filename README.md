@@ -1,16 +1,60 @@
 # Lab Automation v2.0
 
-An AI-driven, multi-zone room automation system using YOLOv8, Home Assistant, Node-RED, and ESP32.
+## Project Overview
+An AI-driven, multi-zone room automation system using YOLOv8, Home Assistant, Node-RED, and ESP32. It is designed to track occupancy and automate laboratory lighting/fans based on people count, with safety as the primary concern.
 
 ## Current Status
+- **Software validation**: Complete
+- **Monitor-mode empty-lab validation**: Passed for ~11 minutes (0 false positives, 0 relay `/set` commands)
+- **Hardware deployment**: Pending
+- **Production-ready**: **NO**. Not physically production-ready until occupied-scene supervised relay validation passes.
 
-- Software validation complete
-- Hardware deployment pending
-- Not physically production-ready until supervised relay validation passes
+## Architecture
+`Camera -> AI PC -> lab/vision/# -> Mosquitto -> Node-RED -> lab/control/relayX/set -> ESP32`
 
-Do not enable physical Auto mode until live camera, MQTT, ESP32 relay, Node-RED, Home Assistant, zone calibration, supervised Auto-mode, and failure tests all pass on real hardware.
+## Hardware and Software Stack
+- **AI PC**: Python 3.11, PyTorch, Ultralytics YOLOv8
+- **Camera Bridge**: MediaMTX (RTSP server) on `hari`
+- **Broker**: Eclipse Mosquitto
+- **Controller**: Node-RED on `labos`
+- **Dashboard**: Home Assistant
+- **Firmware**: Custom ESP32 C++ with 10 active-LOW relays
 
-## Setup Instructions
+## Folder Structure
+- `ai-pc/`: YOLOv8 vision logic, zone mapping, and safe simulator
+- `node-red/flows.json`: Importable priority-safety automation controller flow
+- `esp32/`: Ten-relay controller firmware (original design uses `labos/v2/`)
+- `home-assistant/mqtt.yaml`: MQTT entities
+- `config/`: Secret-free example configuration and zone polygons
+- `tests/`: Software safety verification
+- `docs/`: Architecture, topics, validation, troubleshooting, readiness, status reports
+
+## MQTT Topic Contract
+The current deployed `labos` runtime uses the `lab/...` namespace. The AI publisher is restricted to the `lab/vision/#` namespace.
+- `lab/vision/people_count`: Published by AI
+- `lab/vision/status`, `lab/vision/source_status`, `lab/vision/heartbeat`: Telemetry from AI
+- `lab/automation/mode`: Mode selection (`manual`, `monitor`, `auto`)
+- `lab/control/relayX/set`: Relay commands (Published **ONLY** by Node-RED)
+- `labos/v2/...`: Original hardware spec/namespace (for ESP32 references)
+
+## Camera Bridge Summary
+The RTSP bridge (`rtsp://hari:8554/labcam`) has been hardened with a dedicated systemd service and a health check timer. It currently runs continuously and provides a 1280x720 H.265 stream for the AI PC.
+
+## AI Publisher Behavior
+The AI publisher **must never** publish relay commands. It is blocked from `lab/control/#` or any topic ending in `/set`. It publishes vision reports, and in the event of an upstream failure, it clears detection windows and preserves safety.
+
+## Node-RED Safety Logic
+Node-RED enforces a strict priority order:
+1. **Manual Override**: Highest priority. Overlays manual states over automation.
+2. **Timetable Fallback**: Triggers if vision is stale or unhealthy. Applies a safe state during class hours and delays OFF transitions.
+3. **Healthy Automation**: Triggers only when the camera and AI are healthy. Emits no-flicker state changes based on people count.
+
+## Operating Modes
+- `manual`: Safest mode. Node-RED ignores AI count and never emits relay `/set`. This is the final safe mode.
+- `monitor`: Diagnostic mode. Calculates intended state and logs warnings, but sends zero relay commands.
+- `auto`: Active automation. Requires supervision until fully validated.
+
+## Setup / Run Commands
 
 ### 1. Python Environment (AI PC)
 ```bash
@@ -20,51 +64,35 @@ pip install -e .
 pytest tests/
 ```
 
-### 2. Microcontroller (ESP32)
-1. Open `esp32/lab_automation_v2/lab_automation_v2.ino` in Arduino IDE or PlatformIO.
-2. Update `WIFI_SSID`, `WIFI_PASSWORD`, and `MQTT_HOST` with your credentials.
-3. Flash to ESP32.
-
-### 3. Home Assistant & Node-RED
+### 2. Node-RED & Home Assistant
 1. Import `node-red/flows.json` into Node-RED.
-2. Add `home-assistant/mqtt.yaml` to your Home Assistant `configuration.yaml` includes.
+2. Ensure Node-RED mode defaults to `manual`.
+3. Add `home-assistant/mqtt.yaml` to Home Assistant `configuration.yaml` includes.
 
-## MQTT Topic Namespace
-All topics operate under `labos/v2/`.
-- `labos/v2/vision/zones/report` - Published by AI PC, contains zone mapping.
-- `labos/v2/automation/mode/set` - Used to set Manual, Monitor, or Auto.
-- `labos/v2/relay/+/set` - Relay command topics (Node-RED/HA to ESP32).
-- `labos/v2/relay/+/state` - Relay state topics (ESP32 to HA).
-- `labos/v2/controller/status` - ESP32 LWT (online/offline).
+### 3. Run Vision / Monitor
+```bash
+# Verify config.yaml has no secrets
+python -m ai_pc.main --config config/config.yaml
+```
 
-## Safety Defaults
+## Validation History
+- AI publisher accepts only safe topics.
+- Monitor-mode validation passed with 23 software tests.
+- Camera bridge hardened after upstream connectivity issues.
+- Deployed Node-RED flow correctly processes `lab/vision/people_count`.
+- Empty-lab stability test: 11 minutes in Monitor mode yielded repeated `stable_count = 0` and no relay changes.
 
-- Node-RED defaults to `manual`.
-- Vision publisher accepts only `labos/v2/vision/#`.
-- Monitor mode calculates intended states but sends zero relay commands.
-- Relay `/set` messages are non-retained.
-- Camera/AI failure preserves current relay states.
-- ESP32 initializes every active-LOW relay OFF.
+## Next Validation Step
+1. Occupied-scene Monitor validation when a person is visible.
+2. Supervised Auto validation.
+3. Physical light/fan mapping confirmation.
 
-## Layout
+## Remaining Blockers
+- Supervised occupied-scene Auto tests remain incomplete.
+- Physical relay behavior and mapping must be validated.
+- Zone calibration needs supervised confirmation.
 
-- `ai-pc/`: zone/report/vision logic and safe simulator
-- `node-red/flows.json`: importable automation controller flow
-- `esp32/`: ten-relay controller firmware
-- `home-assistant/mqtt.yaml`: MQTT entities
-- `config/`: secret-free example configuration and initial zones
-- `tests/`: software safety verification
-- `docs/`: architecture, topics, validation, troubleshooting, readiness
-
-## Quick Start
-
-1. Install Python 3.11, Mosquitto, Node-RED, and Home Assistant.
-2. Run `.\setup_windows.ps1`.
-3. Copy/edit `config\config.yaml`; never commit secrets.
-4. Calibrate zones: `.\calibrate_zones.ps1 -Image path\to\empty-lab.jpg`.
-5. Import `node-red\flows.json`, verify mode is `manual`, and configure broker credentials.
-6. Flash ESP32 only during supervised relay testing.
-7. Run `py -3.11 -m pytest`.
-8. Run Monitor-mode simulations before considering Auto.
-
-Physical deployment is gated by `docs/validation-checklist.md`. The current known blocker is the RTSP path `rtsp://hari:8554/labcam`, which returns `404 Not Found` until the upstream camera source is restored.
+## Safety Warnings
+- **DO NOT** enable physical `auto` mode without supervision until full validation passes.
+- Final safe mode is always `manual`.
+- **NEVER** commit Wi-Fi passwords, camera credentials, or MQTT secrets.

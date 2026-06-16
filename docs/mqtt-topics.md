@@ -22,3 +22,6 @@ Current deployed Lab Automation v2.0 runtime on `labos` uses the `lab/...` names
   - any topic containing `/command`
 
 Rules: AI may publish only under `lab/vision/#`; AI must never publish control or relay topics; Node-RED alone may publish physical relay commands.
+
+## Legacy / Hardware Spec Namespace
+The original hardware spec for the ESP32 relays uses `labos/v2/...`. This namespace is maintained on the hardware side for backwards compatibility and original design specifications, but the active runtime telemetry mapping is strictly `lab/...`.
