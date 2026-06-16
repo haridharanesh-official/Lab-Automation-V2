@@ -1,5 +1,9 @@
 import importlib.util
+import json
 from pathlib import Path
+
+import cv2
+import numpy as np
 
 PATH = Path(__file__).parents[1] / "tools" / "validate_zone_geometry.py"
 spec = importlib.util.spec_from_file_location("validate_zone_geometry", PATH)
@@ -15,3 +19,56 @@ def test_centres_unique_and_shared_boundaries_are_reported():
     result = module.validate(zones)
     assert result["all_centres_unique"]
     assert result["overlap_points"] > 0
+
+
+def load_config_zones():
+    return json.loads((Path(__file__).parents[1] / "config" / "zones.json").read_text())["zones"]
+
+
+def classify(point, zones):
+    return [
+        index + 1
+        for index, polygon in enumerate(zones)
+        if cv2.pointPolygonTest(np.array(polygon), point, False) >= 0
+    ]
+
+
+def near_boundary(point, zones, margin=12):
+    return any(
+        abs(cv2.pointPolygonTest(np.array(polygon), point, True)) <= margin
+        for polygon in zones
+    )
+
+
+def test_six_perspective_polygons_load():
+    zones = load_config_zones()
+    assert len(zones) == 6
+    assert all(len(polygon) >= 4 for polygon in zones)
+
+
+def test_user_reference_zone_numbering():
+    zones = load_config_zones()
+    points = {
+        1: (1120, 620),
+        2: (650, 560),
+        3: (250, 650),
+        4: (1050, 150),
+        5: (560, 250),
+        6: (160, 300),
+    }
+    for expected_zone, point in points.items():
+        assert classify(point, zones) == [expected_zone]
+
+
+def test_boundary_margin_uncertainty():
+    zones = load_config_zones()
+    assert near_boundary((790, 303), zones)
+    assert not near_boundary((1120, 620), zones)
+
+
+def test_no_accidental_interior_overlaps():
+    zones = load_config_zones()
+    for y in range(20, 700, 40):
+        for x in range(20, 1260, 40):
+            matches = classify((x, y), zones)
+            assert len(matches) <= 1

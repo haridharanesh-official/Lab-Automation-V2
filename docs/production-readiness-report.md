@@ -114,11 +114,14 @@ Status: Hardware deployment pending
 
 Status: Hardware deployment pending
 
-- Existing `config/zones.json` is provisional.
-- Approximate zone centers map uniquely in software.
+- Existing `config/zones.json` now uses rough slanted perspective polygons from the user-marked back-camera reference.
+- Zone numbering matches the reference: bottom row right-to-left is Zones 1, 2, 3; top row right-to-left is Zones 4, 5, 6.
+- Zone 1/Zone 2 split was corrected so Zone 1 remains the bottom-right wedge and Zone 2 owns the bottom-middle table area.
+- Approximate zone centers and sample foot-points map uniquely in software.
 - Shared boundary ambiguity is documented.
 - Ten-minute live model validation saw 59.20% zone-boundary uncertainty with the provisional grid.
 - Ten-minute live people-count validation saw 36.32% zone-boundary uncertainty with the provisional grid.
+- Live validation with the corrected slanted zones still needs to be rerun after the interrupted calibration pass.
 - Door, seated people, occlusion, and real boundaries are not physically verified.
 - Do not update final zone configuration until supervised live validation passes.
 
