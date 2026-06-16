@@ -19,8 +19,11 @@
 4. **Monitor Mode for Diagnostics**:
    Use `monitor` mode to view intended states without actually firing physical relays.
 
-5. **Stale Vision Does Not Change User Mode**:
+5. **Node-RED Is The Only Automation Authority**:
+   On the intended v2 design, Home Assistant publishes user mode commands, Node-RED publishes `mode_state`, `priority_state`, and relay `/set`, the AI PC publishes only `lab/vision/#`, and the ESP32 publishes relay `/state`. Legacy helper services on `labos` must not republish `lab/automation/mode` or inject relay `/set` commands.
+
+6. **Stale Vision Does Not Change User Mode**:
    If the user selects `auto`, the system should keep `lab/automation/mode_state = auto` even when RTSP, camera, or AI health becomes stale or unhealthy. In that condition, the controller must fall back to timetable logic instead of forcing Manual mode.
 
-6. **Secrets Management**:
+7. **Secrets Management**:
    Never commit `.env` files, passwords, camera URLs with credentials, or Wi-Fi SSIDs to this repository. All credentials should be stored securely on the host machines (e.g., in `~/.config/` or `esp32` local changes).

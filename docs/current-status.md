@@ -11,11 +11,13 @@ Lab Automation v2.0 is currently in the **validation phase**. Software validatio
 - **Empty-Lab Validation**: Ran for ~11 minutes in Monitor mode with:
   - 0 false positives
   - 0 relay `/set` commands issued
-- **Tests**: 23/23 tests passing.
+- **Tests**: 26/26 tests passing.
 - **Node-RED**: Strict priority-safety flow deployed on `labos`, consuming `lab/...` topics.
 - **Mode Handling**: Auto selection now stays `auto` even when vision becomes stale; stale vision changes only `priority_state` to timetable fallback/hold behavior.
-- **Home Assistant**: Live selector wiring on `labos` still needs one cleanup pass. The current discovery entity uses `lab/automation/mode` correctly, but it only exposes `auto` and `manual`, and its state follows the command topic instead of the confirmed `lab/automation/mode_state`.
-- **Live Conflict Found**: A legacy service on `labos` (`labos-automation.service` running `services/automation-bridge/automation_bridge.py`) still republishes `manual` when vision looks stale, so it can override a fresh `auto` selection even though the new Node-RED flow itself no longer does that.
+- **Home Assistant**: The live selector metadata on `labos` now exposes `manual`, `monitor`, and `auto`, and its retained discovery state topic is `lab/automation/mode_state`.
+- **Mode Authority**: The legacy `labos-automation.service` bridge was modernized into a passive observer, so it no longer republishes `lab/automation/mode` or relay `/set` topics.
+- **Relay Command Authority**: The live relay-ack monitor no longer injects relay OFF commands; Node-RED is now the only live relay-command publisher in the validated path.
+- **Live Runtime Caveat**: `labos` is still running `labos-mock-relay.service`, so the latest end-to-end authority validation covered the control path and MQTT contract, not physical ESP32 load switching.
 
 ## Safe Mode Enforcements
 - **Final Safe Mode**: `manual`. The system returns to this mode upon any deployment or recovery.

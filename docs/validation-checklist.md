@@ -66,7 +66,8 @@ Status labels:
 - [x] Verified live `lab/...` diagnostics after deployment: `mode_state`, `manual_override_state`, `priority_state`, `vision_health`, `warning`, `intended_state`.
 - [x] Verified live outside-window fallback behavior lands on `TIMETABLE_HOLD` with zero relay `/set` commands.
 - [x] Verified live manual override capture and clear on `labos`.
-- [ ] Remove or update the legacy `labos-automation.service` bridge on `labos`; it still republishes `lab/automation/mode = manual` on stale vision and conflicts with the deployed Node-RED priority controller.
+- [x] Modernized the legacy `labos-automation.service` bridge on `labos` into a passive observer so it no longer republishes `lab/automation/mode` or relay `/set`.
+- [x] Modernized `labos-system-health.service` to observe the current `lab/vision/people_count` JSON topic instead of the old `/state` count.
 - [ ] Verify live inside-window timetable fallback during `08:30-12:30` or `13:00-16:30`.
 - [x] Auto deduplicates relay commands and requires two empty reports before OFF in software tests.
 - [x] Validated relay mapping in software tests.
@@ -84,10 +85,9 @@ Status labels:
 ## Home Assistant
 - [ ] Verify ten relay switches.
 - [ ] Verify six zone sensors.
-- [ ] Verify mode selector.
-- [x] Audit live HA mode selector wiring on `labos`; current discovery entity uses `lab/automation/mode` but still exposes only `auto` and `manual`, so `monitor` selection from HA is currently invalid.
-- [x] Confirm stale vision no longer forces Node-RED `mode_state` back to `manual`; remaining HA gap is selector discovery/state wiring, not controller mode logic.
-- [ ] Update the live `labos` Home Assistant discovery publisher so the mode selector uses `state_topic = lab/automation/mode_state` and options `manual`, `monitor`, `auto`.
+- [x] Verify mode selector metadata and MQTT contract.
+- [x] Updated the live `labos` Home Assistant discovery publisher so the mode selector uses `state_topic = lab/automation/mode_state` and options `manual`, `monitor`, `auto`.
+- [x] Confirm stale vision no longer forces Node-RED `mode_state` back to `manual`.
 - [ ] Verify health, warning, status, and mismatch sensors.
 
 ## Testing

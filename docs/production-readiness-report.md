@@ -131,7 +131,9 @@ Status: Hardware deployment pending
 - Follow-up debug confirmed the correct live mode command is plain retained string payloads on `lab/automation/mode` such as `auto`; the earlier failed Auto confirmation was caused by reading the stale retained `mode_state=manual` message before the fresh `mode_state=auto` event arrived.
 - A later live validation confirmed that stale or unhealthy vision does not force `mode_state` back to `manual`; `mode_state` stayed `auto` while `priority_state` moved through `VISION_STALE` and `TIMETABLE_HOLD`.
 - Empty-lab stability validation later confirmed that repeated `stable_count = 0` is the correct result for the currently empty room and not evidence of a failed model.
-- Follow-up Home Assistant mode validation uncovered a separate live-system conflict outside the repo Node-RED flow: `/home/labos/labos-edge/services/automation-bridge/automation_bridge.py` is still running under `labos-automation.service` and republishes `lab/automation/mode = manual` when it decides vision is stale.
+- Follow-up end-to-end live cleanup on June 17, 2026 modernized `/home/labos/labos-edge/services/automation-bridge/automation_bridge.py` into a passive observer, so it no longer republishes `lab/automation/mode` or any relay `/set` topics.
+- The live relay safety helper `/home/labos/labos-edge/services/safety-layer/relay_ack_monitor.py` was also modernized so it logs unsafe relay states and timeout errors but does not inject relay OFF commands. Node-RED is now the only relay-command publisher in the validated runtime path.
+- The live system-health monitor was updated to observe the current JSON `lab/vision/people_count` topic instead of the old `/state` count topic.
 
 ## Home Assistant Readiness
 
@@ -140,11 +142,11 @@ Status: Hardware deployment pending
 - Repo Home Assistant MQTT example has been updated to the active `lab/...` runtime contract and now models `manual`, `monitor`, and `auto` against `lab/automation/mode` plus confirmed state from `lab/automation/mode_state`.
 - Live Home Assistant on `labos` is reachable and serving the LabOS dashboard.
 - Live dashboard currently exposes `select.labos_automation_controller_labos_automation_mode`.
-- Live MQTT discovery for that selector still advertises only `auto` and `manual`, and points the selector state to `lab/automation/mode` instead of `lab/automation/mode_state`.
-- Home Assistant logs on June 16-17, 2026 show repeated `Invalid option ... monitor` errors for the automation selector, confirming the selector-discovery mismatch.
-- Live mode validation also showed a second blocker: after a fresh `auto` command, another live service on `labos` republishes `lab/automation/mode = manual` roughly 0.8 seconds later, so the selector cannot stay aligned until that conflicting publisher is removed or updated.
-- Manual and Auto remain controllable through the shared `lab/automation/mode` topic, but Home Assistant cannot yet validate `monitor` end to end until the live discovery publisher is corrected.
+- Live MQTT discovery for that selector now advertises `manual`, `monitor`, and `auto`, and points the selector state to `lab/automation/mode_state`.
+- Home Assistant entity registry on June 17, 2026 confirmed the selector capabilities were updated live to `manual`, `monitor`, and `auto`.
+- During live MQTT validation after the cleanup, `manual`, `monitor`, and `auto` all produced fresh matching `mode_state` updates with no forced return to `manual`.
 - Ten relay switches, six zone sensors, warning/status/mismatch entities still require live Home Assistant verification.
+- The current `labos` runtime still runs `labos-mock-relay.service`, so this Home Assistant validation covered the UI-to-MQTT-to-Node-RED contract and mock relay path, not physical relay hardware.
 
 ## Zone Calibration Readiness
 
