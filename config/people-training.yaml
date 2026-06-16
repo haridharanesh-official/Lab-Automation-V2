@@ -7,11 +7,11 @@ data: C:/Users/prith/Downloads/Lab automation/LabVision-AI/datasets/labos_backca
 model: C:/Users/prith/Downloads/Lab Automation v2.0/models/backcam_yolov8s_improved_v3_hardfp.pt
 
 # Training settings
-epochs: 100
+epochs: 1
 patience: 20           # Early stopping patience
 batch: 16
 imgsz: 1280            # Production resolution
-device: 0              # CUDA device 0
+device: cpu              # CPU since CUDA is unavailable
 workers: 8
 
 # Optimizer settings
