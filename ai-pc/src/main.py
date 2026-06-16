@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 import cv2
+import numpy as np
 import paho.mqtt.client as mqtt
 import yaml
 from ultralytics import YOLO
@@ -69,11 +70,117 @@ def publish_status(publisher: VisionPublisher, source_status: str, stable_count:
     )
 
 
+def zone_color(index: int) -> tuple[int, int, int]:
+    colors = [
+        (0, 102, 255),
+        (0, 200, 255),
+        (0, 200, 0),
+        (255, 128, 0),
+        (255, 0, 255),
+        (255, 0, 0),
+    ]
+    return colors[index % len(colors)]
+
+
+def draw_zone_overlay(frame, zones: list[list[tuple[int, int]]], zone_counts: list[int]) -> None:
+    for index, polygon in enumerate(zones):
+        if not polygon:
+            continue
+        pts = np.array(polygon, dtype=np.int32)
+        color = zone_color(index)
+        overlay = frame.copy()
+        cv2.fillPoly(overlay, [pts], color)
+        cv2.addWeighted(overlay, 0.12, frame, 0.88, 0, frame)
+        cv2.polylines(frame, [pts], True, color, 2, cv2.LINE_AA)
+        moments = cv2.moments(pts)
+        if moments["m00"]:
+            cx = int(moments["m10"] / moments["m00"])
+            cy = int(moments["m01"] / moments["m00"])
+        else:
+            cx, cy = polygon[0]
+        cv2.putText(
+            frame,
+            f"Z{index + 1}: {zone_counts[index]}",
+            (cx - 25, cy),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+
+
+def draw_detection_overlay(frame, result, zones: list[list[tuple[int, int]]], zone_counts: list[int],
+                           stable_count: int, frame_fps: float, latency_ms: float, source_status: str) -> None:
+    draw_zone_overlay(frame, zones, zone_counts)
+    if result.boxes is not None:
+        track_ids = result.boxes.id.int().cpu().tolist() if result.boxes.id is not None else []
+        confidences = result.boxes.conf.cpu().tolist() if result.boxes.conf is not None else []
+        classes = result.boxes.cls.int().cpu().tolist() if result.boxes.cls is not None else []
+        for index, raw_box in enumerate(result.boxes.xyxy.cpu().tolist()):
+            if classes and classes[index] != 0:
+                continue
+            box = [int(round(value)) for value in raw_box]
+            bottom_center = ((box[0] + box[2]) // 2, box[3])
+            zone = assign_zone(bottom_center, zones)
+            color = zone_color(zone - 1) if zone is not None and 1 <= zone <= 6 else (255, 255, 255)
+            confidence = confidences[index] if index < len(confidences) else 0.0
+            track_id = track_ids[index] if index < len(track_ids) else None
+            label = f"person {confidence:.2f}"
+            if track_id is not None:
+                label = f"ID {track_id} {confidence:.2f}"
+            cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color, 2)
+            cv2.circle(frame, bottom_center, 5, color, -1)
+            cv2.putText(
+                frame,
+                label,
+                (box[0], max(25, box[1] - 10)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                color,
+                2,
+                cv2.LINE_AA,
+            )
+            if zone is not None:
+                cv2.putText(
+                    frame,
+                    f"Z{zone}",
+                    (bottom_center[0] + 6, bottom_center[1] - 6),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    2,
+                    cv2.LINE_AA,
+                )
+
+    lines = [
+        f"Stable Count: {stable_count}",
+        f"Zone Counts: {zone_counts}",
+        f"FPS: {frame_fps:.2f}",
+        f"Inference: {latency_ms:.1f} ms",
+        f"Source: {source_status}",
+    ]
+    panel_height = 28 + (len(lines) * 24)
+    cv2.rectangle(frame, (10, 10), (500, panel_height), (0, 0, 0), -1)
+    for index, line in enumerate(lines):
+        cv2.putText(
+            frame,
+            line,
+            (20, 35 + (index * 24)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.65,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config/config.yaml")
     parser.add_argument("--dry-run", action="store_true", help="validate configuration without opening camera or MQTT")
     parser.add_argument("--duration", type=float, default=0, help="optional runtime limit in seconds; 0 means run until stopped")
+    parser.add_argument("--display", action="store_true", help="show a live OpenCV overlay window while publishing")
     args = parser.parse_args()
     config = load_config(args.config)
     if args.dry_run:
@@ -109,6 +216,7 @@ def main() -> None:
     last_publish = 0.0
     started = time.monotonic()
     last_frame_time = started
+    source_status = "starting"
 
     try:
         while True:
@@ -117,13 +225,16 @@ def main() -> None:
             if cap is None:
                 cap = cv2.VideoCapture(camera["url"], cv2.CAP_FFMPEG)
                 if not cap.isOpened():
-                    publisher.publish("lab/vision/source_status", "unhealthy", retain=True)
+                    source_status = "unhealthy"
+                    publisher.publish("lab/vision/source_status", source_status, retain=True)
                     time.sleep(float(camera.get("reconnect_seconds", 5)))
                     continue
-                publisher.publish("lab/vision/source_status", "healthy", retain=True)
+                source_status = "healthy"
+                publisher.publish("lab/vision/source_status", source_status, retain=True)
             ok, frame = cap.read()
             if not ok:
-                publisher.publish("lab/vision/source_status", "unhealthy", retain=True)
+                source_status = "unhealthy"
+                publisher.publish("lab/vision/source_status", source_status, retain=True)
                 camera_interrupted(window)
                 cap.release()
                 cap = None
@@ -151,7 +262,7 @@ def main() -> None:
             stable_count = sum(stable_zone_counts)
 
             if now - last_publish >= 1.0:
-                publish_status(publisher, "healthy", stable_count, stable_zone_counts, frame_fps, latency_ms)
+                publish_status(publisher, source_status, stable_count, stable_zone_counts, frame_fps, latency_ms)
                 last_publish = now
             if now - last_heartbeat >= float(config.get("heartbeat_seconds", 10)):
                 publisher.publish(
@@ -160,11 +271,28 @@ def main() -> None:
                     retain=False,
                 )
                 last_heartbeat = now
+            if args.display:
+                annotated = frame.copy()
+                draw_detection_overlay(
+                    annotated,
+                    result,
+                    zones,
+                    stable_zone_counts,
+                    stable_count,
+                    frame_fps,
+                    latency_ms,
+                    source_status,
+                )
+                cv2.imshow("Lab Automation v2.0 Live Publisher", annotated)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
     finally:
         publisher.publish("lab/vision/source_status", "offline", retain=True)
         publisher.publish("lab/vision/status", "offline", retain=True)
         if cap is not None:
             cap.release()
+        if args.display:
+            cv2.destroyAllWindows()
         client.loop_stop()
         client.disconnect()
 

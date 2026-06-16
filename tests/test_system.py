@@ -302,6 +302,7 @@ def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     stop_script = (ROOT / "stop_lab_automation.ps1").read_text()
     status_script = (ROOT / "status_lab_automation.ps1").read_text()
     startup_doc = (ROOT / "docs/startup-and-shutdown.md").read_text()
+    main_py = (ROOT / "ai-pc/src/main.py").read_text()
 
     assert ".venv\\Scripts\\python.exe" in start_script
     assert "config\\config.yaml" in start_script
@@ -312,15 +313,25 @@ def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     assert "labos:1883" not in start_script  # config-driven, not hard-coded
     assert "rtsp://hari:8554/labcam" not in start_script  # config-driven, not hard-coded
     assert "src.main" in start_script
+    assert "--display" in start_script
     assert "logs\\ai-publisher" in start_script
     assert "did not change automation mode" in start_script
     assert "lab/control" not in start_script
 
     assert "src.main" in stop_script
+    assert "Display mode was" in stop_script
     assert "ai-publisher.pid.json" in stop_script
 
     assert "latest_mode_state" in status_script
     assert "latest_vision_heartbeat_age_seconds" in status_script
+    assert "ai_publisher_display" in status_script
+
+    assert 'parser.add_argument("--display"' in main_py
+    assert "cv2.imshow" in main_py
+    assert "Stable Count:" in main_py
+    assert "Zone Counts:" in main_py
+    assert "Source:" in main_py
 
     assert ".\\start_lab_automation.ps1 -DryRun" in startup_doc
+    assert ".\\start_lab_automation.ps1 -Display" in startup_doc
     assert ".\\stop_lab_automation.ps1" in startup_doc

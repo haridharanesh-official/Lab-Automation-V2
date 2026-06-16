@@ -96,14 +96,15 @@ Preferred operator wrapper on the Windows AI PC:
 ```powershell
 .\start_lab_automation.ps1 -DryRun
 .\start_lab_automation.ps1
+.\start_lab_automation.ps1 -Display
 .\status_lab_automation.ps1
 .\stop_lab_automation.ps1
 ```
 
 What these scripts do:
-- `start_lab_automation.ps1`: verifies the venv, config, zones, model, RTSP stream, MQTT broker, and live retained topics before starting the AI publisher with log capture.
+- `start_lab_automation.ps1`: verifies the venv, config, zones, model, RTSP stream, MQTT broker, and live retained topics before starting the AI publisher with log capture. Use `-Display` to launch the same publisher with a live OpenCV overlay window.
 - `stop_lab_automation.ps1`: stops only the AI publisher wrapper started by the master startup script.
-- `status_lab_automation.ps1`: shows camera reachability, MQTT reachability, latest `mode_state`, heartbeat age, and whether the AI publisher appears to be running.
+- `status_lab_automation.ps1`: shows camera reachability, MQTT reachability, latest `mode_state`, heartbeat age, whether the AI publisher appears to be running, and whether it was started in display mode.
 
 ### 4. Other Existing Operator Scripts
 

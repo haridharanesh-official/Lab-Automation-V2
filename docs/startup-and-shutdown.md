@@ -24,6 +24,12 @@ From the repo root:
 .\start_lab_automation.ps1
 ```
 
+To start the same AI publisher with a live display window:
+
+```powershell
+.\start_lab_automation.ps1 -Display
+```
+
 Recommended first pass:
 
 ```powershell
@@ -52,10 +58,26 @@ When checks pass, the script:
 1. sets `PYTHONPATH=ai-pc`
 2. starts the existing publisher:
    - `.venv\Scripts\python.exe -m src.main --config config/config.yaml`
+   - or `.venv\Scripts\python.exe -m src.main --config config/config.yaml --display` when `-Display` is used
 3. writes a timestamped log file under:
    - `logs\ai-publisher\YYYYMMDD-HHMMSS.log`
 4. stores wrapper PID metadata in:
    - `logs\ai-publisher\ai-publisher.pid.json`
+
+In display mode the publisher opens a live OpenCV window that shows:
+- current camera frame
+- YOLO person boxes
+- confidence values
+- track IDs when available from the tracker
+- zone polygons
+- bottom-centre assignment point for each detected person
+- per-zone counts
+- total stable count
+- FPS
+- inference latency
+- source health
+
+Close the live session with `q` in the OpenCV window or by stopping the launched publisher process.
 
 The wrapper does **not**:
 - switch the system to `auto`
@@ -76,6 +98,7 @@ This reports:
 - latest retained `lab/automation/mode_state` if available
 - latest retained vision heartbeat age if available
 - whether the AI publisher process appears to be running
+- whether the current publisher was started in display mode
 - current wrapper PID and log path if running
 
 ## Stop Command

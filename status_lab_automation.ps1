@@ -108,6 +108,7 @@ if ($mqttReachable) {
 $publisherRunning = $false
 $publisherPid = $null
 $logPath = $null
+$displayMode = $null
 if (Test-Path -LiteralPath $pidFile -PathType Leaf) {
     $metadata = Get-Content -LiteralPath $pidFile -Raw | ConvertFrom-Json
     if ($metadata.pid) {
@@ -116,6 +117,9 @@ if (Test-Path -LiteralPath $pidFile -PathType Leaf) {
             $publisherRunning = $true
             $publisherPid = $metadata.pid
             $logPath = $metadata.log_path
+            if ($null -ne $metadata.display) {
+                $displayMode = [bool]$metadata.display
+            }
         }
     }
 }
@@ -131,4 +135,5 @@ if (Test-Path -LiteralPath $pidFile -PathType Leaf) {
     ai_publisher_running = $publisherRunning
     ai_publisher_pid = $publisherPid
     ai_publisher_log = $logPath
+    ai_publisher_display = $displayMode
 } | Format-List

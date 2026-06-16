@@ -35,6 +35,7 @@ Use the AI PC startup wrapper from the repository root:
 ```powershell
 .\start_lab_automation.ps1 -DryRun
 .\start_lab_automation.ps1
+.\start_lab_automation.ps1 -Display
 ```
 
 Safety behavior of the wrapper:
@@ -43,6 +44,7 @@ Safety behavior of the wrapper:
 - checks the RTSP stream at `rtsp://hari:8554/labcam`
 - attempts to read retained `lab/automation/mode_state` and `lab/vision/heartbeat`
 - starts only the AI vision publisher and writes logs under `logs\ai-publisher\`
+- `-Display` uses the same publisher and same MQTT safety restrictions, but adds a live OpenCV operator window
 - does **not** change the automation mode and does **not** publish any relay/control topics
 
 Use these companion commands as needed:

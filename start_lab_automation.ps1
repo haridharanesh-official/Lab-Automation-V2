@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Display
 )
 
 $ErrorActionPreference = "Stop"
@@ -181,6 +182,7 @@ function Get-ExistingPublisherMetadata {
         Pid = [int]$metadata.pid
         StartedAt = $metadata.started_at
         LogPath = $metadata.log_path
+        Display = [bool]$metadata.display
         CommandLine = $process.CommandLine
     }
 }
@@ -224,6 +226,7 @@ if ($existing) {
     Write-Host "[OK] AI publisher already running (PID $($existing.Pid))" -ForegroundColor Green
     Write-Host "Started: $($existing.StartedAt)"
     Write-Host "Log: $($existing.LogPath)"
+    Write-Host "Display mode: $($existing.Display)"
     exit 0
 }
 
@@ -236,23 +239,29 @@ if ($DryRun) {
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logPath = Join-Path $logDir "$timestamp.log"
-$runnerCommand = "& '$pythonPath' -m src.main --config 'config/config.yaml' *>> '$logPath'"
+$displayArg = if ($Display) { " --display" } else { "" }
+$runnerCommand = "& '$pythonPath' -m src.main --config 'config/config.yaml'$displayArg *>> '$logPath'"
 
 Write-Section "Start Publisher"
 $env:PYTHONPATH = "ai-pc"
 $process = Start-Process -FilePath "powershell.exe" `
     -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $runnerCommand) `
     -WorkingDirectory $repoRoot `
-    -WindowStyle Hidden `
+    -WindowStyle $(if ($Display) { "Normal" } else { "Hidden" }) `
     -PassThru
 
 $metadata = [pscustomobject]@{
     pid = $process.Id
     started_at = (Get-Date).ToString("s")
     log_path = $logPath
+    display = [bool]$Display
 }
 $metadata | ConvertTo-Json | Set-Content -LiteralPath $pidFile
 
 Write-Host "[OK] AI publisher started with wrapper PID $($process.Id)" -ForegroundColor Green
 Write-Host "Log: $logPath"
+Write-Host "Display mode: $([bool]$Display)"
+if ($Display) {
+    Write-Host "A live OpenCV overlay window will open in the launched publisher session. Close it with 'q' or Ctrl+C." -ForegroundColor Green
+}
 Write-Host "Mode remains under Home Assistant / Node-RED control. This script did not change automation mode." -ForegroundColor Yellow
