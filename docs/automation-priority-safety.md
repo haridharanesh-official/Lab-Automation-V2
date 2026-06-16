@@ -115,3 +115,34 @@ Relay mapping for the deployed `labos` runtime:
 - manual mode never emits relay `/set`
 - monitor mode publishes diagnostics and intended state only
 - final recovery order remains Manual, then Monitor, then supervised Auto
+
+## Live Deployment Validation on `labos`
+
+Date: June 16, 2026
+
+- Deployed repo flow to live `labos` Node-RED via the admin API.
+- Backed up the previous live flow to `/home/labos/labos-v2-backups/nodered/flows-20260616-213250.json`.
+- Verified the deployed flow contains `Priority Safety Controller`, `manual_override/clear`, and `TIMETABLE_FALLBACK`.
+- Verified retained mode returned to `manual` immediately after deployment.
+- Observed zero relay `/set` messages during deployment/startup validation.
+
+Simulation-only live checks completed with final mode kept in `manual`:
+
+- healthy people-count path:
+  - `lab/automation/intended_state` published a valid `TWO_THREE` target in Monitor mode
+  - relay `/set` commands observed: `0`
+- `source_healthy=false` / invalid people-count payload:
+  - `lab/automation/warning` published `invalid people_count payload ignored`
+  - `lab/automation/priority_state` moved to `TIMETABLE_HOLD`
+- stale heartbeat / stale vision:
+  - after heartbeat expiry, `lab/automation/priority_state` remained on fallback
+  - `lab/automation/vision_health` published `stale`
+- manual override:
+  - relay state feedback in Manual mode produced `lab/automation/manual_override_state {"2":"OFF"}`
+  - clearing `lab/automation/manual_override/clear` returned `lab/automation/manual_override_state {}`
+
+Notes:
+
+- Live validation was performed outside the timetable windows, so `TIMETABLE_HOLD` was the expected fallback stage.
+- The inside-window fallback branch (`TIMETABLE_FALLBACK`) remains covered by software tests and still needs a live time-window validation pass during `08:30-12:30` or `13:00-16:30`.
+- No Auto-mode relay validation was performed in this deployment step.

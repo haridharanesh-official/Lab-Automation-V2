@@ -54,14 +54,17 @@ Status labels:
 - [x] Ten-minute live people-count validation used MQTT disabled and published zero relay `/set` commands.
 
 ## Node-RED
-- [ ] Import v2 flow on live Node-RED.
+- [x] Import updated priority-safety flow on live Node-RED.
 - [x] Confirm current deployed `labos` runtime mode is Manual.
 - [x] Monitor MQTT test observed zero relay `/set` commands.
 - [x] Verified deployed `labos` Node-RED receives and processes `lab/vision/people_count`.
 - [x] Verified Manual mode emits zero relay `/set` commands during live AI publishing.
 - [x] Repo flow now models priority order: manual override > timetable fallback > healthy people-count automation.
 - [x] Repo flow now documents manual override clear topic and timetable fallback windows.
-- [ ] Verify `labos/v2/automation/decision` response on live Node-RED.
+- [x] Verified live `lab/...` diagnostics after deployment: `mode_state`, `manual_override_state`, `priority_state`, `vision_health`, `warning`, `intended_state`.
+- [x] Verified live outside-window fallback behavior lands on `TIMETABLE_HOLD` with zero relay `/set` commands.
+- [x] Verified live manual override capture and clear on `labos`.
+- [ ] Verify live inside-window timetable fallback during `08:30-12:30` or `13:00-16:30`.
 - [x] Auto deduplicates relay commands and requires two empty reports before OFF in software tests.
 - [x] Validated relay mapping in software tests.
 
@@ -85,6 +88,7 @@ Status labels:
 - [x] Run all existing tests.
 - [x] Static validation passed.
 - [x] Validate live AI -> MQTT -> deployed Node-RED Manual-mode path.
+- [x] Validate live simulation-only priority-safety path with final mode returned to Manual.
 - [ ] Complete full supervised Auto-mode validation with occupied-scene relay changes.
 - [x] Complete supervised Auto-mode entry/exit safety check with final mode returned to Manual.
 - [ ] Complete live failure tests.

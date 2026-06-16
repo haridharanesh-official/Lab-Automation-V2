@@ -14,7 +14,7 @@ Lab Automation v2.0 must not be described as physically production-ready until l
 
 Status: Software validation complete
 
-- Local tests: 18 passed
+- Local tests: 23 passed
 - Dependencies: no broken requirements
 - AI publisher safety: refuses relay/control/set/command topics
 - Live deployment contract update: AI telemetry now targets `lab/vision/...` topics consumed by the current `labos` Node-RED runtime.
@@ -113,15 +113,20 @@ Status: Hardware deployment pending
 
 Status: Hardware deployment pending
 
-- Importable repo v2 flow exists, but deployed `labos` runtime currently consumes `lab/...` AI topics instead of the earlier repo draft `labos/v2/...` topic plan.
+- Updated repo priority-safety flow was deployed to live `labos` Node-RED on June 16, 2026.
+- Live pre-deploy backup saved to `/home/labos/labos-v2-backups/nodered/flows-20260616-213250.json`.
 - Repo flow design now implements priority order: manual override, then timetable fallback, then healthy people-count automation.
 - Repo flow now includes documented manual override clearing and fallback windows `08:30-12:30` and `13:00-16:30`.
 - Deployed Node-RED process on `labos`: running
 - Deployed runtime mode observed on MQTT during validation: `manual`
 - Live AI -> MQTT -> deployed Node-RED path: verified
-- Node-RED processed live AI counts and published `lab/automation/accepted_count`, `lab/automation/vision_health`, and `lab/automation/vision_age_seconds`
-- Live broker Manual-mode test produced zero relay `/set` commands.
-- No `labos/v2/automation/decision` response was observed after a simulated report, indicating the v2 flow/controller is not currently verified as deployed and active.
+- Node-RED processed live AI/simulated counts and published `lab/automation/mode_state`, `lab/automation/manual_override_state`, `lab/automation/priority_state`, `lab/automation/vision_health`, `lab/automation/warning`, and `lab/automation/intended_state`.
+- Live broker deployment/startup relay `/set` commands observed: `0`
+- Live broker simulation relay `/set` commands observed in Manual/Monitor validation: `0`
+- Manual override capture and clear were verified live.
+- Outside-window timetable fallback was verified live as `TIMETABLE_HOLD`.
+- Healthy people-count path was verified live in Monitor mode through `intended_state` output with zero relay commands.
+- Inside-window timetable fallback still needs a live validation pass during an active class window.
 
 ## Home Assistant Readiness
 
