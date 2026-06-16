@@ -111,6 +111,20 @@ This stops only the wrapper process recorded by `start_lab_automation.ps1`.
 
 The stop script refuses to kill unrelated processes if the PID file points at something that does not look like the AI publisher wrapper.
 
+## June 17, 2026 Validation Result
+
+Live startup/shutdown validation on the Windows AI PC confirmed:
+- `.\start_lab_automation.ps1 -DryRun` passes against the real broker and RTSP stream
+- `.\start_lab_automation.ps1 -DryRun -Display` passes against the real broker and RTSP stream
+- `.\start_lab_automation.ps1` starts the headless publisher and writes a timestamped log
+- `.\start_lab_automation.ps1 -Display` starts the same publisher in display mode and records `display=true` in PID metadata
+- `.\status_lab_automation.ps1` reports the running PID, log path, and display flag
+- `.\stop_lab_automation.ps1` stops either headless or display mode cleanly
+
+Root cause of the reported display bug:
+- older PID metadata files did not contain the `display` field
+- the scripts now check whether that property exists before reading it
+
 ## Logs
 
 Publisher logs are stored here:

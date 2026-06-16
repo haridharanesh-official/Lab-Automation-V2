@@ -36,18 +36,13 @@ function Assert-File([string]$Path, [string]$Label) {
 }
 
 function Test-TcpEndpoint([string]$HostName, [int]$Port, [int]$TimeoutMs = 3000) {
-    $client = New-Object System.Net.Sockets.TcpClient
+    $timeoutSeconds = [math]::Ceiling($TimeoutMs / 1000.0)
+    $script = "import socket,sys; socket.create_connection((r'$HostName',$Port), timeout=$timeoutSeconds).close(); print('OK')"
     try {
-        $async = $client.BeginConnect($HostName, $Port, $null, $null)
-        if (-not $async.AsyncWaitHandle.WaitOne($TimeoutMs, $false)) {
-            return $false
-        }
-        $client.EndConnect($async) | Out-Null
-        return $true
+        $result = & .\.venv\Scripts\python.exe -c $script 2>$null
+        return $LASTEXITCODE -eq 0 -and $result -eq "OK"
     } catch {
         return $false
-    } finally {
-        $client.Close()
     }
 }
 
@@ -178,11 +173,15 @@ function Get-ExistingPublisherMetadata {
     if (-not $process) {
         return $null
     }
+    $display = $false
+    if ($metadata.PSObject.Properties.Name -contains "display") {
+        $display = [bool]$metadata.display
+    }
     return [pscustomobject]@{
         Pid = [int]$metadata.pid
         StartedAt = $metadata.started_at
         LogPath = $metadata.log_path
-        Display = [bool]$metadata.display
+        Display = $display
         CommandLine = $process.CommandLine
     }
 }

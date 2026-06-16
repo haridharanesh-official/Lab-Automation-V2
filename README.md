@@ -106,6 +106,11 @@ What these scripts do:
 - `stop_lab_automation.ps1`: stops only the AI publisher wrapper started by the master startup script.
 - `status_lab_automation.ps1`: shows camera reachability, MQTT reachability, latest `mode_state`, heartbeat age, whether the AI publisher appears to be running, and whether it was started in display mode.
 
+June 17, 2026 startup validation notes:
+- headless startup and shutdown were validated against the live `labos` broker and `hari` RTSP stream
+- display startup was validated against the live broker/stream and now records `display=true` in PID metadata cleanly
+- if an old `logs/ai-publisher/ai-publisher.pid.json` file exists from before display mode was added, the scripts now tolerate the missing `display` property instead of crashing
+
 ### 4. Other Existing Operator Scripts
 
 - Setup Windows environment:

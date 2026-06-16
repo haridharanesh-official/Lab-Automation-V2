@@ -47,6 +47,9 @@ Status labels:
 - [x] Verified 10-second heartbeat.
 - [x] Verified camera failure clears windows and preserves states.
 - [x] Verified unsafe MQTT topics are rejected.
+- [x] Verified `start_lab_automation.ps1` headless live startup/shutdown path against the real broker and RTSP stream.
+- [x] Verified `start_lab_automation.ps1 -Display` live startup/shutdown path against the real broker and RTSP stream.
+- [x] Fixed startup PID metadata parsing so older runs without a `display` field no longer crash display mode.
 - [x] Retargeted AI PC live publisher defaults to `lab/vision/people_count`, `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/heartbeat`.
 - [x] Confirmed AI publisher still refuses `lab/control/#`, relay, `/set`, and `/command` topics.
 - [x] Camera retry Monitor validation imported no MQTT client and published zero reports or relay `/set` commands.
@@ -88,6 +91,7 @@ Status labels:
 - [x] Verify mode selector metadata and MQTT contract.
 - [x] Updated the live `labos` Home Assistant discovery publisher so the mode selector uses `state_topic = lab/automation/mode_state` and options `manual`, `monitor`, `auto`.
 - [x] Confirm stale vision no longer forces Node-RED `mode_state` back to `manual`.
+- [x] Reconfirmed fresh live `mode_state` transitions for `manual`, `monitor`, and `auto` on June 17, 2026.
 - [ ] Verify health, warning, status, and mismatch sensors.
 
 ## Testing
@@ -100,4 +104,5 @@ Status labels:
 - [ ] Complete full supervised Auto-mode validation with occupied-scene relay changes.
 - [ ] Complete supervised occupied-scene Auto validation with non-zero stable counts observed on live `lab/vision/people_count`.
 - [x] Complete supervised Auto-mode entry/exit safety check with final mode returned to Manual.
+- [ ] Complete a cleaner live stale-vision fallback validation without noisy mock-relay/manual-override diagnostics.
 - [ ] Complete live failure tests.

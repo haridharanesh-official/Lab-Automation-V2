@@ -42,6 +42,6 @@ Write-Host "Stopped AI publisher wrapper PID $($metadata.pid)."
 if ($metadata.log_path) {
     Write-Host "Last log: $($metadata.log_path)"
 }
-if ($null -ne $metadata.display) {
+if ($metadata.PSObject.Properties.Name -contains "display") {
     Write-Host "Display mode was: $([bool]$metadata.display)"
 }

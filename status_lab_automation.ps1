@@ -12,18 +12,13 @@ $configPath = Join-Path $repoRoot "config\config.yaml"
 $pidFile = Join-Path $repoRoot "logs\ai-publisher\ai-publisher.pid.json"
 
 function Test-TcpEndpoint([string]$HostName, [int]$Port, [int]$TimeoutMs = 3000) {
-    $client = New-Object System.Net.Sockets.TcpClient
+    $timeoutSeconds = [math]::Ceiling($TimeoutMs / 1000.0)
+    $script = "import socket,sys; socket.create_connection((r'$HostName',$Port), timeout=$timeoutSeconds).close(); print('OK')"
     try {
-        $async = $client.BeginConnect($HostName, $Port, $null, $null)
-        if (-not $async.AsyncWaitHandle.WaitOne($TimeoutMs, $false)) {
-            return $false
-        }
-        $client.EndConnect($async) | Out-Null
-        return $true
+        $result = & .\.venv\Scripts\python.exe -c $script 2>$null
+        return $LASTEXITCODE -eq 0 -and $result -eq "OK"
     } catch {
         return $false
-    } finally {
-        $client.Close()
     }
 }
 
@@ -117,7 +112,7 @@ if (Test-Path -LiteralPath $pidFile -PathType Leaf) {
             $publisherRunning = $true
             $publisherPid = $metadata.pid
             $logPath = $metadata.log_path
-            if ($null -ne $metadata.display) {
+            if ($metadata.PSObject.Properties.Name -contains "display") {
                 $displayMode = [bool]$metadata.display
             }
         }

@@ -47,6 +47,12 @@ Safety behavior of the wrapper:
 - `-Display` uses the same publisher and same MQTT safety restrictions, but adds a live OpenCV operator window
 - does **not** change the automation mode and does **not** publish any relay/control topics
 
+June 17, 2026 live wrapper validation confirmed:
+- headless and display startup use the same `src.main` publisher path
+- display mode adds visualization only; it does not loosen MQTT topic restrictions
+- live broker captures still showed AI publishing only `lab/vision/#`
+- no `lab/control/+/set` messages were observed from the AI publisher during headless or display validation
+
 Use these companion commands as needed:
 
 ```powershell
