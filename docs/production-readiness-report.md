@@ -36,6 +36,7 @@
 
 - Custom model and YOLO11s completed an offline comparison; custom model is recommended. Objective accuracy scoring still requires human ground-truth labels.
 - Monitor runtime configuration uses the selected custom model. Both known RTSP routes failed verification on June 16, 2026, so five-minute live detection, real timing, tracking, reconnection, and final zone calibration were not run.
+- June 16 MQTT check: `labos:1883` is reachable and safe Monitor/vision status publishes succeed. No retained v2 controller or relay state was observed, and a Monitor-mode fake vision report produced zero relay `/set` commands but also no observed automation decision response. This indicates the v2 Node-RED automation flow/controller still needs deployment or runtime verification.
 - Physical polygon calibration and boundary stability
 - Exact report/heartbeat timing under real workload
 - Broker, Node-RED, Home Assistant, and ESP32 integration

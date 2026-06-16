@@ -2,7 +2,7 @@ import os
 import glob
 import shutil
 
-DATASET_PATH = r"C:\Users\prith\Downloads\Lab automation\LabVision-AI\datasets\labos_backcam_people_improved_v3_hardfp"
+DATASET_PATH = r"C:\Users\prith\Downloads\Lab automation\LabVision-AI\datasets\labos_backcam_people_v4_clean"
 REVIEW_DIR = os.path.join(DATASET_PATH, "review", "manual-label-review")
 
 def calculate_iou(box1, box2):
