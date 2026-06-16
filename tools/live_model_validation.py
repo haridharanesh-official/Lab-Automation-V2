@@ -71,7 +71,7 @@ def zone_boundary_uncertain(point: tuple[int, int], zones: list[list[tuple[int, 
     return min(distances) <= threshold_px
 
 
-def draw_overlay(frame, detections: list[dict], zones: list[list[tuple[int, int]]], frame_fps: float) -> None:
+def draw_overlay(frame, detections: list[dict], zones: list[list[tuple[int, int]]], frame_fps: float, latency_ms: float) -> None:
     zone_counts = [0] * len(zones)
     for detection in detections:
         zone = detection["zone"]
@@ -87,7 +87,10 @@ def draw_overlay(frame, detections: list[dict], zones: list[list[tuple[int, int]
     for index, polygon in enumerate(zones):
         cv2.polylines(frame, [np.array(polygon)], True, (255, 128, 0), 2)
         cv2.putText(frame, f"Z{index + 1}:{zone_counts[index]}", polygon[0], cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 128, 0), 2, cv2.LINE_AA)
-    cv2.putText(frame, f"FPS {frame_fps:.1f}", (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2, cv2.LINE_AA)
+    total = len(detections)
+    cv2.rectangle(frame, (0, 0), (430, 64), (0, 0, 0), -1)
+    cv2.putText(frame, f"People: {total} | FPS: {frame_fps:.1f} | Latency: {latency_ms:.1f} ms", (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame, "Monitor validation only - MQTT disabled - relay /set: 0", (10, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (180, 255, 180), 1, cv2.LINE_AA)
 
 
 def open_capture(url: str):
@@ -224,14 +227,20 @@ def run(args: argparse.Namespace) -> dict:
             rows.append(row)
             latencies.append(latency_ms)
             counts.append(count)
-            draw_overlay(frame, detections, zones, frame_fps)
+            draw_overlay(frame, detections, zones, frame_fps, latency_ms)
             writer.write(frame)
+            if args.display:
+                cv2.imshow(args.window_title, frame)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
             frame_number += 1
 
     if capture is not None:
         capture.release()
     if writer is not None:
         writer.release()
+    if args.display:
+        cv2.destroyAllWindows()
 
     elapsed = time.monotonic() - started
     duplicate_frames = sum(1 for row in rows if row["duplicate_warnings"])
@@ -292,6 +301,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reconnect-seconds", type=float, default=5)
     parser.add_argument("--duplicate-iou", type=float, default=0.70)
     parser.add_argument("--zone-boundary-threshold", type=float, default=12)
+    parser.add_argument("--display", action="store_true", help="show a live OpenCV overlay window while validating")
+    parser.add_argument("--window-title", default="Lab Automation v2.0 People Count")
     return parser.parse_args()
 
 

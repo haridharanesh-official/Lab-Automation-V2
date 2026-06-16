@@ -59,6 +59,16 @@ Ten-minute live model validation:
 - Decode failures: 1; reconnect attempts/events: 40.
 - Result: live vision ran for the requested duration, but intermittent RTSP `404` periods and camera bridge restarts remain a camera stability blocker.
 
+Ten-minute live people-count validation:
+
+- Runtime: 600.015 seconds; frames processed: 14,984; average FPS: 24.97.
+- Average inference latency: 13.76 ms; p95 latency: 17.95 ms; peak GPU memory: 188.83 MB.
+- Detection coverage: people in 14,968 frames; 2+ people in 14,668 frames; max people detected: 6.
+- Duplicate-box frames: 53, duplicate rate: 0.354%.
+- False-zero events: 0.
+- Decode failures: 0; reconnects: 0.
+- Result: live overlay and per-frame logging passed for Monitor-mode validation.
+
 ## MQTT Readiness
 
 Status: Partially verified
@@ -70,6 +80,7 @@ Status: Partially verified
 - AI publishes outside `labos/v2/vision/#`: not observed
 - Camera retry Monitor validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 - Ten-minute live model validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
+- Ten-minute live people-count validation used MQTT disabled; reports published: 0; relay `/set` commands: 0
 
 ## ESP32 Readiness
 
@@ -107,6 +118,7 @@ Status: Hardware deployment pending
 - Approximate zone centers map uniquely in software.
 - Shared boundary ambiguity is documented.
 - Ten-minute live model validation saw 59.20% zone-boundary uncertainty with the provisional grid.
+- Ten-minute live people-count validation saw 36.32% zone-boundary uncertainty with the provisional grid.
 - Door, seated people, occlusion, and real boundaries are not physically verified.
 - Do not update final zone configuration until supervised live validation passes.
 
