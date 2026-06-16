@@ -28,7 +28,10 @@ Status labels:
 - [x] Run five-minute Monitor-safe AI validation on `rtsp://hari:8554/labcam`.
 - [x] Run ten-minute live people-detection validation with annotated video and per-frame CSV/JSONL artifacts.
 - [x] Run ten-minute live people-count validation with visible overlay and per-frame CSV/JSONL artifacts.
-- [ ] Harden camera bridge against intermittent `/labcam` `404` periods during upstream interruptions.
+- [x] Harden camera bridge against intermittent `/labcam` `404` periods during upstream interruptions.
+- [x] Verify `mediamtx.service` starts on boot on `hari`.
+- [x] Verify `labos-camera-bridge.service` starts on boot on `hari`.
+- [x] Verify `labcam-healthcheck.timer` is enabled on `hari`.
 
 ## Room mapping
 - [x] Verified `config/zones.json`.

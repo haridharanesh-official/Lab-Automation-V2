@@ -157,3 +157,86 @@ Monitor-safe AI validation:
 - Relay `/set` commands: `0`.
 
 Remaining camera note: the bridge service should be monitored for stale ffmpeg sessions after upstream interruptions. A future hardening pass should make the bridge exit and restart cleanly on broken local publish sockets.
+
+## Camera Bridge Hardening: June 16, 2026
+
+Scope: camera bridge, MediaMTX, ffmpeg publisher, and documentation only. No relays, ESP32, Home Assistant controls, Node-RED deployment, MQTT relay topics, or Auto mode were touched.
+
+### Files Created Or Modified On `hari`
+
+- `/home/hari/.config/labos-camera-bridge.env`
+- `/home/hari/.config/systemd/user/labos-camera-bridge.service`
+- `/home/hari/.config/systemd/user/labcam-healthcheck.service`
+- `/home/hari/.config/systemd/user/labcam-healthcheck.timer`
+- `/home/hari/LabOS/LabOS-camera-pi/services/labos_camera_bridge.sh`
+- `/home/hari/LabOS/LabOS-camera-pi/services/labcam_healthcheck.sh`
+- Backup copies under `/home/hari/labos-v2-backups/`
+
+### Hardened Service Behavior
+
+- `mediamtx.service`: enabled for the `hari` user and starts on boot.
+- `labos-camera-bridge.service`: enabled for the `hari` user and starts on boot.
+- Bridge credentials were moved out of the service file into `~/.config/labos-camera-bridge.env`.
+- The bridge service now uses:
+  - `Restart=always`
+  - `RestartSec=15`
+  - `StartLimitIntervalSec=300`
+  - `StartLimitBurst=5`
+  - `PartOf=mediamtx.service`
+- `labcam-healthcheck.timer`: enabled for the `hari` user and runs once per minute after boot.
+- `labcam-healthcheck.service`: probes `rtsp://127.0.0.1:8554/labcam` and restarts only `labos-camera-bridge.service` if the path is stale.
+
+### Exact `hari` Commands Used
+
+Passwords and camera credentials are redacted below.
+
+```bash
+hostname
+whoami
+date
+
+ping -c 4 -W 2 192.168.5.110
+nc -vz -w 5 192.168.5.110 80
+nc -vz -w 5 192.168.5.110 554
+nc -vz -w 5 192.168.5.110 8554
+
+ps -ef | grep -Ei 'mediamtx|ffmpeg|labcam' | grep -v grep
+ss -ltnp 2>/dev/null | grep -E ':8554|:8888|:1935|:8889'
+
+find /home/hari/mediamtx -maxdepth 2 -type f | sort
+find /home/hari/LabOS/LabOS-camera-pi -maxdepth 3 -type f 2>/dev/null | sort
+find /home/hari/.config/systemd/user -maxdepth 2 -type f | sort
+
+systemctl --user --no-pager status mediamtx labos-camera-bridge
+grep -n -A8 -B4 labcam /home/hari/mediamtx/mediamtx.yml
+grep -RInE 'labcam|mediamtx|ffmpeg|192\.168\.5\.110|rtsps://' /home/hari/LabOS /home/hari/mediamtx /home/hari/.config/systemd/user 2>/dev/null | sed -E 's#(rtsp|rtsps)://[^@ ]+@#\1://<redacted>@#g' | head -200
+
+ffprobe -hide_banner -v error -rtsp_transport tcp -show_entries stream=codec_name,codec_type,width,height,avg_frame_rate -of json rtsps://<redacted>@192.168.5.110:8554/video/live?channel=1&subtype=1&unicast=true&proto=Onvif
+ffprobe -hide_banner -v error -rtsp_transport tcp -show_entries stream=codec_name,codec_type,width,height,avg_frame_rate -of json rtsp://127.0.0.1:8554/labcam
+
+systemctl --user restart labos-camera-bridge.service
+systemctl --user restart mediamtx.service
+systemctl --user reset-failed labos-camera-bridge.service
+
+systemctl --user enable mediamtx.service labos-camera-bridge.service labcam-healthcheck.timer
+systemctl --user start labcam-healthcheck.service
+
+ffprobe -hide_banner -v error -rtsp_transport tcp -show_entries stream=codec_name,codec_type,width,height,avg_frame_rate -of json rtsp://127.0.0.1:8554/labcam
+ffmpeg -hide_banner -loglevel warning -rtsp_transport tcp -i rtsp://127.0.0.1:8554/labcam -t 300 -an -f null -
+```
+
+### Verification Result
+
+- Camera IP `192.168.5.110`: reachable from `hari`
+- Upstream secure RTSPS source on `192.168.5.110:8554`: readable from `hari`
+- MediaMTX: running and enabled on boot
+- ffmpeg bridge: running and enabled on boot
+- Health-check timer: enabled and active
+- Local `ffprobe rtsp://127.0.0.1:8554/labcam`: passed
+- Local five-minute `ffmpeg` decode: passed
+- AI PC `ffprobe rtsp://hari:8554/labcam`: passed
+- AI PC 30-second `ffmpeg` decode: passed
+
+### Remaining Blocker
+
+The bridge `404` condition is now recoverable, but the stream still emits occasional HEVC reference-frame decode warnings. This is a stream-quality issue to monitor, distinct from the bridge availability problem.

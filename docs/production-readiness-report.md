@@ -48,6 +48,18 @@ Fresh June 16 retry validation:
 - AI PC five-minute decode: passed with initial HEVC reference-frame warnings only.
 - Monitor-safe AI validation: 7,484 frames over 300.016 seconds, 24.95 FPS, zero decode failures, zero reconnects, zero false-zero reports.
 
+Camera bridge hardening:
+
+- `mediamtx.service` and `labos-camera-bridge.service` are enabled for the `hari` user and start on boot.
+- Camera credentials were moved into `~/.config/labos-camera-bridge.env` on `hari`, outside repo-tracked files.
+- Added `labcam-healthcheck.service` and `labcam-healthcheck.timer` on `hari` to probe `rtsp://127.0.0.1:8554/labcam` and restart only the bridge if the path returns `404`.
+- Bridge service restart behavior now includes a 15-second delay and systemd start-rate limiting.
+- Verification after bridge restart: passed.
+- Verification after MediaMTX restart: passed.
+- Local five-minute decode on `hari`: passed.
+- AI PC `ffprobe` and 30-second decode of `rtsp://hari:8554/labcam`: passed.
+- Remaining stream issue: occasional HEVC reference-frame warnings still appear during decode.
+
 Ten-minute live model validation:
 
 - Model/settings: `backcam_yolov8s_improved_v3_hardfp.pt`, confidence `0.35`, image size `1280`, CUDA `0`, ByteTrack, people class only.
@@ -145,8 +157,8 @@ Status: Hardware deployment pending
 
 ## Remaining Blockers
 
-- Keep monitoring `/labcam` bridge stability after upstream interruptions.
-- Harden the camera bridge so upstream interruptions do not produce intermittent `/labcam` `404` periods.
+- Keep monitoring the hardened `/labcam` bridge and health-check timer during longer unattended runs.
+- Reduce or eliminate upstream HEVC reference-frame decode warnings if they affect downstream analytics.
 - Deploy/import and verify the v2 Node-RED flow.
 - Verify ESP32 firmware on real hardware.
 - Verify Home Assistant entities.
