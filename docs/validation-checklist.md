@@ -55,8 +55,10 @@ Status labels:
 
 ## Node-RED
 - [ ] Import v2 flow on live Node-RED.
-- [ ] Confirm default mode is Manual.
+- [x] Confirm current deployed `labos` runtime mode is Manual.
 - [x] Monitor MQTT test observed zero relay `/set` commands.
+- [x] Verified deployed `labos` Node-RED receives and processes `lab/vision/people_count`.
+- [x] Verified Manual mode emits zero relay `/set` commands during live AI publishing.
 - [ ] Verify `labos/v2/automation/decision` response on live Node-RED.
 - [x] Auto deduplicates relay commands and requires two empty reports before OFF in software tests.
 - [x] Validated relay mapping in software tests.
@@ -80,5 +82,6 @@ Status labels:
 ## Testing
 - [x] Run all existing tests.
 - [x] Static validation passed.
+- [x] Validate live AI -> MQTT -> deployed Node-RED Manual-mode path.
 - [ ] Complete supervised Auto-mode validation.
 - [ ] Complete live failure tests.

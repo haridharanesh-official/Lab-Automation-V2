@@ -114,8 +114,11 @@ Status: Hardware deployment pending
 Status: Hardware deployment pending
 
 - Importable repo v2 flow exists, but deployed `labos` runtime currently consumes `lab/...` AI topics instead of the earlier repo draft `labos/v2/...` topic plan.
-- Expected default mode is Manual.
-- Live broker Monitor test produced zero relay `/set` commands.
+- Deployed Node-RED process on `labos`: running
+- Deployed runtime mode observed on MQTT during validation: `manual`
+- Live AI -> MQTT -> deployed Node-RED path: verified
+- Node-RED processed live AI counts and published `lab/automation/accepted_count`, `lab/automation/vision_health`, and `lab/automation/vision_age_seconds`
+- Live broker Manual-mode test produced zero relay `/set` commands.
 - No `labos/v2/automation/decision` response was observed after a simulated report, indicating the v2 flow/controller is not currently verified as deployed and active.
 
 ## Home Assistant Readiness

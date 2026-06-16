@@ -93,3 +93,42 @@ Zone assignment was reasonable as a software exercise, but the current polygons 
 ## Result
 
 The live people-count model validation passed for Monitor-mode software testing. It does not make the system physically production-ready. Remaining blockers are final zone calibration, controlled scene validation, supervised relay/ESP32/Node-RED/Home Assistant validation, supervised Auto-mode testing, and failure testing.
+
+## Deployed Node-RED Validation
+
+Follow-up validation against the currently deployed `labos` Node-RED runtime was completed after the AI PC publisher was retargeted to `lab/vision/...`.
+
+- Node-RED process on `labos`: running
+- MQTT broker on `labos:1883`: reachable
+- Current automation mode observed on MQTT: `manual`
+- Live AI publisher source: `rtsp://hari:8554/labcam`
+
+Observed live AI payload sample:
+
+```json
+{
+  "publisher": "labvision-ai-pc",
+  "timestamp": 1781611109533,
+  "total_count": 0,
+  "stable_count": 0,
+  "zone_counts": [0, 0, 0, 0, 0, 0],
+  "source_healthy": true,
+  "status": "online",
+  "fps": 21.277,
+  "inference_ms": 10.726
+}
+```
+
+Observed Node-RED processing evidence after the live publisher started:
+
+- `lab/automation/vision_health = healthy`
+- `lab/automation/vision_age_seconds = 0`
+- repeated `lab/automation/accepted_count` messages with `count: 0` and `target: EMPTY`
+
+Manual-mode safety result:
+
+- Relay `/set` messages observed during the live run: `0`
+- Relay state topics remained visible as feedback only
+- Auto mode enabled in this validation step: `false`
+
+This confirms the existing deployed `labos` Node-RED flow is receiving and processing the new AI PC `lab/vision/people_count` messages while remaining safe in Manual mode.
