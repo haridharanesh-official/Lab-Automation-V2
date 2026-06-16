@@ -42,6 +42,7 @@ The current deployed `labos` runtime uses the `lab/...` namespace. The AI publis
 - `lab/vision/people_count`: Published by AI
 - `lab/vision/status`, `lab/vision/source_status`, `lab/vision/heartbeat`: Telemetry from AI
 - `lab/automation/mode`: Mode selection (`manual`, `monitor`, `auto`)
+- `lab/automation/mode_state`: Confirmed controller mode state for dashboards and validation
 - `lab/control/relayX/set`: Relay commands (Published **ONLY** by Node-RED)
 - `labos/v2/...`: Original hardware spec/namespace (for ESP32 references)
 

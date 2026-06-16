@@ -14,6 +14,8 @@ Lab Automation v2.0 is currently in the **validation phase**. Software validatio
 - **Tests**: 23/23 tests passing.
 - **Node-RED**: Strict priority-safety flow deployed on `labos`, consuming `lab/...` topics.
 - **Mode Handling**: Auto selection now stays `auto` even when vision becomes stale; stale vision changes only `priority_state` to timetable fallback/hold behavior.
+- **Home Assistant**: Live selector wiring on `labos` still needs one cleanup pass. The current discovery entity uses `lab/automation/mode` correctly, but it only exposes `auto` and `manual`, and its state follows the command topic instead of the confirmed `lab/automation/mode_state`.
+- **Live Conflict Found**: A legacy service on `labos` (`labos-automation.service` running `services/automation-bridge/automation_bridge.py`) still republishes `manual` when vision looks stale, so it can override a fresh `auto` selection even though the new Node-RED flow itself no longer does that.
 
 ## Safe Mode Enforcements
 - **Final Safe Mode**: `manual`. The system returns to this mode upon any deployment or recovery.

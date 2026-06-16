@@ -1,83 +1,73 @@
 mqtt:
   select:
-    - name: Lab Automation Mode
-      unique_id: labos_v2_mode
-      command_topic: labos/v2/automation/mode/set
-      state_topic: labos/v2/automation/mode/state
+    - name: LabOS Automation Mode
+      unique_id: labos_automation_mode
+      command_topic: lab/automation/mode
+      state_topic: lab/automation/mode_state
       options: [manual, monitor, auto]
       retain: true
   sensor:
     - name: Lab Vision Status
-      unique_id: labos_v2_vision_status
-      state_topic: labos/v2/vision/status
-    - name: Lab Controller Status
-      unique_id: labos_v2_controller_status
-      state_topic: labos/v2/controller/status
+      unique_id: lab_vision_status
+      state_topic: lab/vision/status
+      value_template: "{{ value_json.status if value_json is mapping and 'status' in value_json else value }}"
+    - name: Lab Vision Source Status
+      unique_id: lab_vision_source_status
+      state_topic: lab/vision/source_status
+    - name: Lab Automation Status
+      unique_id: lab_automation_status
+      state_topic: lab/automation/status
+    - name: Lab Automation Priority State
+      unique_id: lab_automation_priority_state
+      state_topic: lab/automation/priority_state
+    - name: Lab Automation Vision Health
+      unique_id: lab_automation_vision_health
+      state_topic: lab/automation/vision_health
     - name: Lab Automation Warning
-      unique_id: labos_v2_warning
-      state_topic: labos/v2/automation/warning
-    - name: Zone 1 Occupancy
-      unique_id: labos_v2_zone_1
-      state_topic: labos/v2/vision/zones/report
-      value_template: "{{ value_json.zones[0] }}"
-    - name: Zone 2 Occupancy
-      unique_id: labos_v2_zone_2
-      state_topic: labos/v2/vision/zones/report
-      value_template: "{{ value_json.zones[1] }}"
-    - name: Zone 3 Occupancy
-      unique_id: labos_v2_zone_3
-      state_topic: labos/v2/vision/zones/report
-      value_template: "{{ value_json.zones[2] }}"
-    - name: Zone 4 Occupancy
-      unique_id: labos_v2_zone_4
-      state_topic: labos/v2/vision/zones/report
-      value_template: "{{ value_json.zones[3] }}"
-    - name: Zone 5 Occupancy
-      unique_id: labos_v2_zone_5
-      state_topic: labos/v2/vision/zones/report
-      value_template: "{{ value_json.zones[4] }}"
-    - name: Zone 6 Occupancy
-      unique_id: labos_v2_zone_6
-      state_topic: labos/v2/vision/zones/report
-      value_template: "{{ value_json.zones[5] }}"
+      unique_id: lab_automation_warning
+      state_topic: lab/automation/warning
+    - name: Lab People Count
+      unique_id: lab_vision_people_count
+      state_topic: lab/vision/people_count
+      value_template: "{{ value_json.stable_count }}"
   switch:
-    - name: Lab Relay 1 (Light 1)
-      unique_id: labos_v2_relay_1
-      command_topic: labos/v2/relay/1/set
-      state_topic: labos/v2/relay/1/state
-    - name: Lab Relay 2 (Light 2)
-      unique_id: labos_v2_relay_2
-      command_topic: labos/v2/relay/2/set
-      state_topic: labos/v2/relay/2/state
-    - name: Lab Relay 3 (Light 3)
-      unique_id: labos_v2_relay_3
-      command_topic: labos/v2/relay/3/set
-      state_topic: labos/v2/relay/3/state
-    - name: Lab Relay 4 (Light 4)
-      unique_id: labos_v2_relay_4
-      command_topic: labos/v2/relay/4/set
-      state_topic: labos/v2/relay/4/state
-    - name: Lab Relay 5 (Light 5)
-      unique_id: labos_v2_relay_5
-      command_topic: labos/v2/relay/5/set
-      state_topic: labos/v2/relay/5/state
-    - name: Lab Relay 6 (Light 6)
-      unique_id: labos_v2_relay_6
-      command_topic: labos/v2/relay/6/set
-      state_topic: labos/v2/relay/6/state
-    - name: Lab Relay 7 (Fan 1)
-      unique_id: labos_v2_relay_7
-      command_topic: labos/v2/relay/7/set
-      state_topic: labos/v2/relay/7/state
-    - name: Lab Relay 8 (Fan 2)
-      unique_id: labos_v2_relay_8
-      command_topic: labos/v2/relay/8/set
-      state_topic: labos/v2/relay/8/state
-    - name: Lab Relay 9 (Fan 3)
-      unique_id: labos_v2_relay_9
-      command_topic: labos/v2/relay/9/set
-      state_topic: labos/v2/relay/9/state
-    - name: Lab Relay 10 (Fan 4)
-      unique_id: labos_v2_relay_10
-      command_topic: labos/v2/relay/10/set
-      state_topic: labos/v2/relay/10/state
+    - name: Lab Relay 1
+      unique_id: lab_relay_1
+      command_topic: lab/control/relay1/set
+      state_topic: lab/control/relay1/state
+    - name: Lab Relay 2
+      unique_id: lab_relay_2
+      command_topic: lab/control/relay2/set
+      state_topic: lab/control/relay2/state
+    - name: Lab Relay 3
+      unique_id: lab_relay_3
+      command_topic: lab/control/relay3/set
+      state_topic: lab/control/relay3/state
+    - name: Lab Relay 4
+      unique_id: lab_relay_4
+      command_topic: lab/control/relay4/set
+      state_topic: lab/control/relay4/state
+    - name: Lab Relay 5
+      unique_id: lab_relay_5
+      command_topic: lab/control/relay5/set
+      state_topic: lab/control/relay5/state
+    - name: Lab Relay 6
+      unique_id: lab_relay_6
+      command_topic: lab/control/relay6/set
+      state_topic: lab/control/relay6/state
+    - name: Lab Relay 7
+      unique_id: lab_relay_7
+      command_topic: lab/control/relay7/set
+      state_topic: lab/control/relay7/state
+    - name: Lab Relay 8
+      unique_id: lab_relay_8
+      command_topic: lab/control/relay8/set
+      state_topic: lab/control/relay8/state
+    - name: Lab Relay 9
+      unique_id: lab_relay_9
+      command_topic: lab/control/relay9/set
+      state_topic: lab/control/relay9/state
+    - name: Lab Relay 10
+      unique_id: lab_relay_10
+      command_topic: lab/control/relay10/set
+      state_topic: lab/control/relay10/state

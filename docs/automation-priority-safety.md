@@ -68,6 +68,13 @@ Notes:
 - `mode_state` is published as a retained diagnostic message and may also be republished on later ticks
 - when validating transitions, ignore stale retained history and capture fresh events after subscribing
 
+Home Assistant note:
+
+- The Home Assistant selector should publish to `lab/automation/mode`.
+- The selector should read confirmed state from `lab/automation/mode_state`, not from the command topic.
+- The selector options must include all three modes: `manual`, `monitor`, and `auto`.
+- A June 17, 2026 live audit found the deployed discovery entity on `labos` still advertised only `auto` and `manual`, which is why Home Assistant rejected `monitor` selections.
+
 ## Mode And Stale Vision Behavior
 
 The flow now keeps the selected mode and the decision source separate:

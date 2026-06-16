@@ -124,6 +124,20 @@ def test_artifacts_enforce_namespace_and_gpio():
     assert "decision_source:target.decisionSource" in func
 
 
+def test_home_assistant_mqtt_contract_matches_lab_runtime():
+    mqtt_yaml = (ROOT / "home-assistant/mqtt.yaml").read_text()
+    assert "command_topic: lab/automation/mode" in mqtt_yaml
+    assert "state_topic: lab/automation/mode_state" in mqtt_yaml
+    assert "options: [manual, monitor, auto]" in mqtt_yaml
+    assert "state_topic: lab/vision/status" in mqtt_yaml
+    assert "state_topic: lab/vision/source_status" in mqtt_yaml
+    assert "state_topic: lab/automation/priority_state" in mqtt_yaml
+    assert "state_topic: lab/vision/people_count" in mqtt_yaml
+    assert "command_topic: lab/control/relay1/set" in mqtt_yaml
+    assert "state_topic: lab/control/relay10/state" in mqtt_yaml
+    assert "labos/v2/" not in mqtt_yaml
+
+
 def test_vision_publisher_rejects_unsafe_topics_before_client_publish():
     class FakeClient:
         def __init__(self):
