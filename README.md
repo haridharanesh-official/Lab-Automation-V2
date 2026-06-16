@@ -80,9 +80,35 @@ pytest tests/
 
 ### 3. Run Vision / Monitor
 ```bash
-# Verify config.yaml has no secrets
-python -m ai_pc.main --config config/config.yaml
+# Windows PowerShell helper
+.\run_monitor.ps1
 ```
+
+Equivalent direct command:
+
+```bash
+set PYTHONPATH=ai-pc
+.\.venv\Scripts\python.exe -m src.main --config config/config.yaml
+```
+
+### 4. Other Existing Operator Scripts
+
+- Setup Windows environment:
+  - `.\setup_windows.ps1`
+- Run safe simulator:
+  - `.\simulate_reports.ps1`
+- Open zone editor:
+  - `.\calibrate_zones.ps1 -Image <path-to-image>`
+- Live RTSP monitor window:
+  - `.\.venv\Scripts\python.exe tools\live_stream_monitor.py`
+- Live validation overlay:
+  - `.\.venv\Scripts\python.exe tools\live_model_validation.py --source rtsp://hari:8554/labcam --model models/backcam_yolov8s_improved_v3_hardfp.pt --conf 0.35 --image-size 1280 --device 0 --tracker bytetrack.yaml --zones config/zones.json --duration 600 --display --output-dir monitor-results/live-validation`
+
+### 5. Current Startup Reality
+
+- `hari` has user services for `mediamtx.service`, `labos-camera-bridge.service`, and `labcam-healthcheck.timer`.
+- `labos` has system services for Node-RED-adjacent helpers, event logging, mock relay behavior, and health/status monitoring.
+- The AI PC currently has helper scripts, but no repo-tracked Windows service, Scheduled Task, or startup script that automatically launches the live MQTT publisher on boot/login.
 
 ## Validation History
 - AI publisher accepts only safe topics.
