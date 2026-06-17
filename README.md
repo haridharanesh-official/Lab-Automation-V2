@@ -24,7 +24,7 @@ An AI-driven, multi-zone room automation system using YOLOv8, Home Assistant, No
 - `ai-pc/`: YOLOv8 vision logic, zone mapping, and safe simulator
 - `node-red/flows.json`: Importable priority-safety automation controller flow
 - `esp32/`: Ten-relay controller firmware (original design uses `labos/v2/`)
-- `home-assistant/mqtt.yaml`: MQTT entities
+- `home-assistant/`: MQTT entities plus camera/dashboard snippets
 - `config/`: Secret-free example configuration and zone polygons
 - `tests/`: Software safety verification
 - `docs/`: Architecture, topics, validation, troubleshooting, readiness, status reports
@@ -34,6 +34,7 @@ If you are new to the project, start with these guides:
 - [Project Explained for Beginners](file:///c:/Users/prith/Downloads/Lab%20Automation%20v2.0/docs/project-explained-for-beginners.md): What the project does, how components connect, and basic safety rules in plain English.
 - [File-by-File Guide](file:///c:/Users/prith/Downloads/Lab%20Automation%20v2.0/docs/file-by-file-guide.md): A complete explanation of every folder, script, config, and file extension in the repository.
 - [Logic Explained](file:///c:/Users/prith/Downloads/Lab%20Automation%20v2.0/docs/logic-explained.md): A detailed look at the AI detection flow, priority rules, and no-flicker logic.
+- [Home Assistant Dashboard](file:///c:/Users/prith/Downloads/Lab%20Automation%20v2.0/docs/home-assistant-dashboard.md): How to add the live `rtsp://hari:8554/labcam` feed and arrange the LabOS dashboard.
 - [Tools and Technology Choices](file:///c:/Users/prith/Downloads/Lab%20Automation%20v2.0/docs/tools-and-technology-choices.md): Why we chose YOLOv8, MQTT, Node-RED, ESP32, etc., and alternative options.
 - [Improvement Roadmap](file:///c:/Users/prith/Downloads/Lab%20Automation%20v2.0/docs/improvement-roadmap.md): Planned security updates, testing tasks, and diagnostics.
 

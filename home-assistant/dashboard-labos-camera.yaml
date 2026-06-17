@@ -1,0 +1,42 @@
+# Lovelace dashboard snippet for the LabOS camera and automation status.
+#
+# Add these cards near the top of the LabOS dashboard after the Generic Camera
+# entity `camera.labos_live_camera` exists.
+- type: picture-entity
+  entity: camera.labos_live_camera
+  name: LabOS Live Camera
+  camera_view: live
+  show_name: true
+  show_state: false
+
+- type: entities
+  title: LabOS Automation
+  entities:
+    - entity: select.labos_automation_mode
+      name: Automation Mode
+    - entity: sensor.lab_people_count
+      name: People Count
+    - entity: sensor.lab_vision_source_status
+      name: Vision Source
+    - entity: sensor.lab_automation_vision_health
+      name: Vision Health
+    - entity: sensor.lab_automation_warning
+      name: Warning
+    - entity: sensor.lab_automation_priority_state
+      name: Current Decision Source
+
+- type: entities
+  title: LabOS Loads
+  entities:
+    - entity: switch.lab_relay_7
+      name: Light A4
+    - entity: switch.lab_relay_2
+      name: Light B2
+    - entity: switch.lab_relay_3
+      name: Fan 1
+    - entity: switch.lab_relay_8
+      name: Fan 2
+    - entity: switch.lab_relay_4
+      name: Fan 3
+    - entity: switch.lab_relay_6
+      name: Fan 4

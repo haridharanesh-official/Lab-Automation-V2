@@ -1,0 +1,13 @@
+# LabOS live camera entity for Home Assistant.
+#
+# Include from configuration.yaml with:
+#
+#   camera: !include camera.yaml
+#
+# The stream is provided by the hardened MediaMTX bridge on `hari`.
+# Do not place camera credentials here; the published /labcam stream is plain RTSP
+# inside the LabOS network.
+- platform: generic
+  name: LabOS Live Camera
+  stream_source: rtsp://hari:8554/labcam
+  verify_ssl: false
