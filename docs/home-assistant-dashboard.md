@@ -19,16 +19,20 @@ height=720
 r_frame_rate=25/1
 ```
 
-The requested read from `labos` is:
+Verification from the Home Assistant host on `labos` on 2026-06-17:
 
-```bash
-ffprobe -v error -select_streams v:0 \
-  -show_entries stream=codec_name,width,height,r_frame_rate \
-  -of default=noprint_wrappers=1 \
-  rtsp://hari:8554/labcam
+```text
+codec_name=hevc
+width=1280
+height=720
+r_frame_rate=25/1
 ```
 
-During this repo update, SSH commands to `labos` timed out from the Codex session, so the stream was verified from the AI PC instead. Direct RTSP playback should still be checked from the Home Assistant host after applying the dashboard change.
+The exact `labos` verification command was:
+
+```bash
+ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate -of default=noprint_wrappers=1 rtsp://hari:8554/labcam
+```
 
 ## Recommended Home Assistant Setup
 
@@ -64,6 +68,20 @@ camera: !include camera.yaml
 
 with [home-assistant/camera.yaml](../home-assistant/camera.yaml).
 
+Live deployment note: the `labos` Home Assistant container uses `/home/labos/labos-edge/docker/homeassistant` mounted as `/config`. The live deployment added:
+
+- `/config/camera.yaml`
+- `camera: !include camera.yaml` in `/config/configuration.yaml`
+- a `picture-entity` card at the top of `/config/labos-dashboard.yaml`
+
+Backups were written under:
+
+```text
+/home/labos/labos-v2-backups/homeassistant-camera/
+```
+
+Home Assistant config check passed before restart, and the `labos-homeassistant` container restarted successfully.
+
 ## Dashboard Layout
 
 Place the camera near the top of the LabOS dashboard, close to:
@@ -86,26 +104,40 @@ show_name: true
 show_state: false
 ```
 
-The companion cards show:
+The companion cards show the live LabOS entity names currently used in the dashboard:
 
-- `select.labos_automation_mode`
-- `sensor.lab_people_count`
-- `sensor.lab_vision_source_status`
-- `sensor.lab_automation_vision_health`
-- `sensor.lab_automation_warning`
-- `sensor.lab_automation_priority_state`
+- `select.labos_automation_controller_labos_automation_mode`
+- `sensor.labos_automation_controller_labos_people_count`
+- `sensor.labos_automation_controller_labos_automation_vision_health`
+- `sensor.labos_automation_controller_labos_automation_warning`
+- `sensor.labos_automation_controller_labos_automation_status`
+- `sensor.labos_automation_controller_labos_last_action`
 - relay switches mapped to their physical loads
 
 ## Relay Mapping Shown On Dashboard
 
 | Dashboard label | Entity | MQTT command | MQTT state |
 | --- | --- | --- | --- |
-| Light A4 | `switch.lab_relay_7` | `lab/control/relay7/set` | `lab/control/relay7/state` |
-| Light B2 | `switch.lab_relay_2` | `lab/control/relay2/set` | `lab/control/relay2/state` |
-| Fan 1 | `switch.lab_relay_3` | `lab/control/relay3/set` | `lab/control/relay3/state` |
-| Fan 2 | `switch.lab_relay_8` | `lab/control/relay8/set` | `lab/control/relay8/state` |
-| Fan 3 | `switch.lab_relay_4` | `lab/control/relay4/set` | `lab/control/relay4/state` |
-| Fan 4 | `switch.lab_relay_6` | `lab/control/relay6/set` | `lab/control/relay6/state` |
+| Light A4 | `switch.labos_final_lab_relay_node_01_4_lights` | `lab/control/relay7/set` | `lab/control/relay7/state` |
+| Light B2 | `switch.labos_final_lab_relay_node_02_2_lights` | `lab/control/relay2/set` | `lab/control/relay2/state` |
+| Fan 1 | `switch.labos_final_lab_relay_node_03_fan_1` | `lab/control/relay3/set` | `lab/control/relay3/state` |
+| Fan 2 | `switch.labos_final_lab_relay_node_04_fan_2` | `lab/control/relay8/set` | `lab/control/relay8/state` |
+| Fan 3 | `switch.labos_final_lab_relay_node_05_fan_3` | `lab/control/relay4/set` | `lab/control/relay4/state` |
+| Fan 4 | `switch.labos_final_lab_relay_node_06_fan_4` | `lab/control/relay6/set` | `lab/control/relay6/state` |
+
+MQTT discovery confirmed these command/state topics before the live camera card was added.
+
+## Live Deployment Result
+
+- AI PC RTSP check: passed.
+- `labos` RTSP check: passed.
+- Home Assistant config check: passed.
+- Home Assistant restart: `labos-homeassistant` restarted and came back up.
+- Dashboard YAML: `camera.labos_live_camera` card inserted at the top.
+- Home Assistant logs after restart: no camera, generic-camera, stream, ffmpeg, RTSP, invalid-config, or error lines were found in the checked startup window.
+- Recorder database did not yet show a stored `camera.labos_live_camera` state during the immediate post-restart query. Visual browser confirmation is still required.
+
+The change did not modify Node-RED, ESP32 firmware, relay MQTT topics, or Auto mode logic.
 
 ## Validation Checklist
 
@@ -144,3 +176,35 @@ Common stream details:
 - Frame rate: 25 FPS
 
 If the browser cannot display the stream reliably, Home Assistant may need its stream/ffmpeg pipeline checked for HEVC handling. That is a Home Assistant rendering issue, not automatically a camera bridge failure.
+
+If HEVC/H.265 is the browser problem, keep the original `rtsp://hari:8554/labcam` stream unchanged for the AI PC and add a separate HA-friendly stream. Preferred fallback:
+
+- create a second MediaMTX/FFmpeg path for Home Assistant only
+- transcode or restream to H.264 or MJPEG
+- expose it as a separate HA camera entity
+- do not change the AI PC stream unless separately validated
+
+## Suggested Next Home Assistant Features
+
+High priority:
+
+- Emergency Manual Safe Mode button that publishes retained `lab/automation/mode = manual`.
+- Empty-room 5-minute countdown display based on Node-RED zero-hold timing.
+- AI freshness / last update age card from heartbeat and people-count age.
+- Relay command-vs-feedback mismatch panel.
+- Current decision card showing `EMPTY`, `ONE`, `TWO_THREE`, or `FOUR_PLUS`.
+
+Medium priority:
+
+- No-flicker audit panel showing last stage change and repeated-command suppression.
+- Last relay command log.
+- LabOS health summary for AI PC, MQTT, Node-RED, ESP32, and camera.
+- Smart-board read-only dashboard with camera, count, mode, warning, and current loads.
+
+Future:
+
+- Energy monitoring.
+- Temperature/humidity based fan assist.
+- Door/contact sensor.
+- Timetable/schedule mode UI.
+- Notifications for AI stale, ESP32 offline, relay mismatch, or camera stream failure.

@@ -12,31 +12,31 @@
 - type: entities
   title: LabOS Automation
   entities:
-    - entity: select.labos_automation_mode
+    - entity: select.labos_automation_controller_labos_automation_mode
       name: Automation Mode
-    - entity: sensor.lab_people_count
+    - entity: sensor.labos_automation_controller_labos_people_count
       name: People Count
-    - entity: sensor.lab_vision_source_status
-      name: Vision Source
-    - entity: sensor.lab_automation_vision_health
+    - entity: sensor.labos_automation_controller_labos_automation_vision_health
       name: Vision Health
-    - entity: sensor.lab_automation_warning
+    - entity: sensor.labos_automation_controller_labos_automation_warning
       name: Warning
-    - entity: sensor.lab_automation_priority_state
-      name: Current Decision Source
+    - entity: sensor.labos_automation_controller_labos_automation_status
+      name: Automation Status
+    - entity: sensor.labos_automation_controller_labos_last_action
+      name: Last Action / Decision
 
 - type: entities
   title: LabOS Loads
   entities:
-    - entity: switch.lab_relay_7
+    - entity: switch.labos_final_lab_relay_node_01_4_lights
       name: Light A4
-    - entity: switch.lab_relay_2
+    - entity: switch.labos_final_lab_relay_node_02_2_lights
       name: Light B2
-    - entity: switch.lab_relay_3
+    - entity: switch.labos_final_lab_relay_node_03_fan_1
       name: Fan 1
-    - entity: switch.lab_relay_8
+    - entity: switch.labos_final_lab_relay_node_04_fan_2
       name: Fan 2
-    - entity: switch.lab_relay_4
+    - entity: switch.labos_final_lab_relay_node_05_fan_3
       name: Fan 3
-    - entity: switch.lab_relay_6
+    - entity: switch.labos_final_lab_relay_node_06_fan_4
       name: Fan 4
