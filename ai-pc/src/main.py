@@ -18,6 +18,9 @@ from .zones import CountWindow
 from .zones import assign_zone
 
 
+COUNTING_MODES = {"total-count", "zone-count"}
+
+
 class DebouncedPeopleCount:
     """Keeps HA/automation people count stable through brief missed detections."""
 
@@ -71,6 +74,13 @@ def load_zones(path: str) -> list[list[tuple[int, int]]]:
     return [[tuple(point) for point in polygon] for polygon in data.get("zones", [])]
 
 
+def normalize_counting_mode(value: str | None) -> str:
+    mode = str(value or "total-count").strip().lower()
+    if mode not in COUNTING_MODES:
+        raise ValueError("counting_mode must be 'total-count' or 'zone-count'")
+    return mode
+
+
 def bottom_center_point(box: list[int]) -> tuple[int, int]:
     return (int((box[0] + box[2]) // 2), int(box[3]))
 
@@ -103,6 +113,29 @@ def frame_assignments(result, zones: list[list[tuple[int, int]]]) -> tuple[list[
     return counts, assignments
 
 
+def total_people_assignments(result) -> tuple[int, list[dict]]:
+    assignments: list[dict] = []
+    if result.boxes is None:
+        return 0, assignments
+    track_ids = result.boxes.id.int().cpu().tolist() if result.boxes.id is not None else []
+    confidences = result.boxes.conf.cpu().tolist() if result.boxes.conf is not None else []
+    classes = result.boxes.cls.int().cpu().tolist() if result.boxes.cls is not None else []
+    for index, raw_box in enumerate(result.boxes.xyxy.cpu().tolist()):
+        if classes and classes[index] != 0:
+            continue
+        box = [int(round(value)) for value in raw_box]
+        assignments.append(
+            {
+                "box": box,
+                "bottom_center": bottom_center_point(box),
+                "zone": None,
+                "confidence": confidences[index] if index < len(confidences) else 0.0,
+                "track_id": track_ids[index] if index < len(track_ids) else None,
+            }
+        )
+    return len(assignments), assignments
+
+
 def publish_status(
     publisher: VisionPublisher,
     source_status: str,
@@ -112,8 +145,13 @@ def publish_status(
     debounced_zone_counts: list[int],
     frame_fps: float,
     latency_ms: float,
+    counting_mode: str = "zone-count",
 ) -> None:
     now_ms = int(time.time() * 1000)
+    counting_mode = normalize_counting_mode(counting_mode)
+    zone_counts_payload = debounced_zone_counts if counting_mode == "zone-count" else None
+    raw_zone_counts_payload = current_zone_counts if counting_mode == "zone-count" else None
+    window_zone_counts_payload = stable_zone_counts if counting_mode == "zone-count" else None
     publisher.publish("lab/vision/status", "online", retain=True)
     publisher.publish("lab/vision/source_status", source_status, retain=True)
     raw_payload = {
@@ -121,7 +159,8 @@ def publish_status(
         "timestamp": now_ms,
         "total_count": sum(current_zone_counts),
         "raw_total_count": sum(current_zone_counts),
-        "raw_zone_counts": current_zone_counts,
+        "raw_zone_counts": raw_zone_counts_payload,
+        "counting_mode": counting_mode,
         "source_healthy": source_status == "healthy",
         "status": "online",
         "fps": round(frame_fps, 3),
@@ -135,12 +174,13 @@ def publish_status(
             "timestamp": now_ms,
             "total_count": sum(debounced_zone_counts),
             "stable_count": sum(debounced_zone_counts),
-            "zone_counts": debounced_zone_counts,
+            "zone_counts": zone_counts_payload,
             "window_stable_count": stable_count,
-            "window_zone_counts": stable_zone_counts,
+            "window_zone_counts": window_zone_counts_payload,
             "raw_total_count": sum(current_zone_counts),
-            "raw_zone_counts": current_zone_counts,
+            "raw_zone_counts": raw_zone_counts_payload,
             "debounced": True,
+            "counting_mode": counting_mode,
             "source_healthy": source_status == "healthy",
             "status": "online",
             "fps": round(frame_fps, 3),
@@ -270,15 +310,81 @@ def draw_detection_overlay(frame, assignments: list[dict], zones: list[list[tupl
         )
 
 
+def draw_total_count_overlay(
+    frame,
+    stable_count: int,
+    frame_fps: float,
+    source_status: str,
+    counting_mode: str = "total-count",
+) -> None:
+    lines = [
+        f"Mode: {counting_mode}",
+        f"Stable Count: {stable_count}",
+        f"FPS: {frame_fps:.2f}",
+        f"Source: {source_status}",
+    ]
+    cv2.rectangle(frame, (10, 10), (290, 118), (0, 0, 0), -1)
+    for index, line in enumerate(lines):
+        cv2.putText(
+            frame,
+            line,
+            (20, 35 + (index * 24)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.62,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+
+
+def render_display_frame(
+    frame,
+    counting_mode: str,
+    assignments: list[dict],
+    zones: list[list[tuple[int, int]]],
+    current_zone_counts: list[int],
+    stable_zone_counts: list[int],
+    stable_count: int,
+    frame_fps: float,
+    latency_ms: float,
+    source_status: str,
+    window_samples: int,
+    seconds_until_report: float,
+    debounced_zone_counts: list[int],
+):
+    annotated = frame.copy()
+    if normalize_counting_mode(counting_mode) == "total-count":
+        draw_total_count_overlay(annotated, sum(debounced_zone_counts), frame_fps, source_status)
+    else:
+        draw_detection_overlay(
+            annotated,
+            assignments,
+            zones,
+            current_zone_counts,
+            stable_zone_counts,
+            stable_count,
+            frame_fps,
+            latency_ms,
+            source_status,
+            window_samples,
+            seconds_until_report,
+            debounced_zone_counts,
+        )
+    return annotated
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config/config.yaml")
     parser.add_argument("--dry-run", action="store_true", help="validate configuration without opening camera or MQTT")
     parser.add_argument("--duration", type=float, default=0, help="optional runtime limit in seconds; 0 means run until stopped")
     parser.add_argument("--display", action="store_true", help="show a live OpenCV overlay window while publishing")
+    parser.add_argument("--counting-mode", choices=sorted(COUNTING_MODES), help="override config counting_mode")
     args = parser.parse_args()
     config = load_config(args.config)
+    counting_mode = normalize_counting_mode(args.counting_mode or config.get("counting_mode", "total-count"))
     if args.dry_run:
+        config["counting_mode"] = counting_mode
         print(json.dumps(config, indent=2))
         return
 
@@ -291,7 +397,9 @@ def main() -> None:
 
     camera = config["camera"]
     model_config = config["model"]
-    zones = load_zones(config.get("zones_path", "config/zones.json"))
+    zones = load_zones(config.get("zones_path", "config/zones.json")) if counting_mode == "zone-count" else []
+    if counting_mode == "zone-count" and len(zones) != 6:
+        raise SystemExit("zone-count mode requires config/zones.json with six polygons")
     model = YOLO(model_config["path"])
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -355,7 +463,11 @@ def main() -> None:
                 verbose=False,
             )[0]
             latency_ms = (time.perf_counter() - tick) * 1000
-            current_zone_counts, assignments = frame_assignments(result, zones)
+            if counting_mode == "zone-count":
+                current_zone_counts, assignments = frame_assignments(result, zones)
+            else:
+                total_count, assignments = total_people_assignments(result)
+                current_zone_counts = [total_count, 0, 0, 0, 0, 0]
             window.add(current_zone_counts, sample_time=now)
             stable_zone_counts = window.medians(now)
             stable_count = sum(stable_zone_counts)
@@ -371,6 +483,7 @@ def main() -> None:
                     debounced_zone_counts,
                     frame_fps,
                     latency_ms,
+                    counting_mode,
                 )
                 last_publish = now
             if now - last_heartbeat >= float(config.get("heartbeat_seconds", 10)):
@@ -381,9 +494,9 @@ def main() -> None:
                 )
                 last_heartbeat = now
             if args.display:
-                annotated = frame.copy()
-                draw_detection_overlay(
-                    annotated,
+                annotated = render_display_frame(
+                    frame,
+                    counting_mode,
                     assignments,
                     zones,
                     current_zone_counts,

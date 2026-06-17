@@ -30,6 +30,8 @@ Node-RED alone may publish relay commands. The AI PC publishes only `lab/vision/
 
 - `lab/automation/mode`
 - `lab/automation/mode_state`
+- `lab/automation/status`
+- `lab/automation/count_source`
 - `lab/automation/manual_override/clear`
 - `lab/automation/manual_override_state`
 - `lab/automation/accepted_count`
@@ -143,7 +145,7 @@ When mode is `auto` and vision becomes stale or unhealthy:
 
 ## People-Count Automation
 
-People-count automation is used only when vision is healthy. This is the active Auto behavior for now: Node-RED uses the total debounced count from `lab/vision/people_count.stable_count`, not per-zone counts.
+People-count automation is used only when vision is healthy. This is the active Auto behavior for now: Node-RED uses the total debounced count from `lab/vision/people_count.stable_count`, not per-zone counts. The retained diagnostic topic `lab/automation/count_source` should publish `total-count`.
 
 Healthy means:
 
@@ -152,7 +154,7 @@ Healthy means:
 - heartbeat is fresh
 - `lab/vision/people_count` is fresh
 
-Zone mapping remains provisional and is used for display/debug validation only. `zone_counts` may be present in the payload, but it must not drive Auto relay decisions until zone calibration is physically validated.
+Zone mapping remains provisional and is used for display/debug validation only. `zone_counts` may be present in the payload, and `zone-count` publisher mode can produce zone counts for future validation, but it must not drive Auto relay decisions until zone calibration is physically validated and Node-RED is explicitly switched to a zone-count source.
 
 The current stage mapping remains:
 

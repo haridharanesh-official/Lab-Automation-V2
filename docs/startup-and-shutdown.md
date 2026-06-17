@@ -30,6 +30,15 @@ To start the same AI publisher with a live display window:
 .\start_lab_automation.ps1 -Display
 ```
 
+To choose the counting mode explicitly:
+
+```powershell
+.\start_lab_automation.ps1 -CountingMode total-count
+.\start_lab_automation.ps1 -CountingMode zone-count
+.\start_lab_automation.ps1 -Display -CountingMode total-count
+.\start_lab_automation.ps1 -Display -CountingMode zone-count
+```
+
 Recommended first pass:
 
 ```powershell
@@ -65,20 +74,8 @@ When checks pass, the script:
    - `logs\ai-publisher\ai-publisher.pid.json`
 
 In display mode the publisher opens a live OpenCV window that shows:
-- current camera frame
-- YOLO person boxes
-- confidence values
-- track IDs when available from the tracker
-- zone polygons
-- bottom-centre assignment point for each detected person
-- assigned zone label or `OUT` marker for each person foot point
-- current per-zone counts
-- rolling stable/window zone counts
-- debounced published people count
-- window sample count and seconds until report
-- FPS
-- inference latency
-- source health
+- `total-count`: clean camera footage with a small unobtrusive overlay showing mode, stable count, FPS, and source health. It does not draw boxes, tracker IDs, confidence labels, zone polygons, labels, or foot points.
+- `zone-count`: full debug overlay showing YOLO boxes, confidence values, track IDs when available, zone polygons, bottom-centre assignment points, assigned zone labels or `OUT` markers, current per-zone counts, stable/window zone counts, published people count, FPS, inference latency, and source health.
 
 Close the live session with `q` in the OpenCV window or by stopping the launched publisher process.
 

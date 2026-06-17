@@ -25,7 +25,16 @@ from src.automation import (
     is_within_fallback_window,
 )
 from src.main import camera_interrupted
-from src.main import DebouncedPeopleCount, bottom_center_point, frame_assignments, load_zones, publish_status
+from src.main import (
+    DebouncedPeopleCount,
+    bottom_center_point,
+    frame_assignments,
+    load_zones,
+    normalize_counting_mode,
+    publish_status,
+    render_display_frame,
+    total_people_assignments,
+)
 from src.mqtt_publisher import VisionPublisher
 from src.reporting import build_report, validate_report
 from src.topics import assert_vision_topic_safe
@@ -233,6 +242,74 @@ def test_publish_status_splits_raw_and_debounced_people_count_topics():
     assert stable_payload["raw_total_count"] == 2
 
 
+def test_publish_status_total_count_mode_omits_zone_payloads():
+    class FakeClient:
+        def __init__(self):
+            self.calls = []
+
+        def publish(self, *args, **kwargs):
+            self.calls.append((args, kwargs))
+
+    client = FakeClient()
+    publish_status(
+        VisionPublisher(client),
+        "healthy",
+        stable_count=3,
+        stable_zone_counts=[3, 0, 0, 0, 0, 0],
+        current_zone_counts=[4, 0, 0, 0, 0, 0],
+        debounced_zone_counts=[3, 0, 0, 0, 0, 0],
+        frame_fps=25.0,
+        latency_ms=12.0,
+        counting_mode="total-count",
+    )
+    by_topic = {args[0]: json.loads(args[1]) if args[1].startswith("{") else args[1] for args, _kwargs in client.calls}
+    assert by_topic["lab/vision/raw_people_count"]["counting_mode"] == "total-count"
+    assert by_topic["lab/vision/raw_people_count"]["raw_total_count"] == 4
+    assert by_topic["lab/vision/raw_people_count"]["raw_zone_counts"] is None
+    stable_payload = by_topic["lab/vision/people_count"]
+    assert stable_payload["counting_mode"] == "total-count"
+    assert stable_payload["stable_count"] == 3
+    assert stable_payload["zone_counts"] is None
+    assert stable_payload["window_zone_counts"] is None
+    assert stable_payload["raw_zone_counts"] is None
+
+
+def test_publish_status_zone_count_mode_keeps_zone_payloads():
+    class FakeClient:
+        def __init__(self):
+            self.calls = []
+
+        def publish(self, *args, **kwargs):
+            self.calls.append((args, kwargs))
+
+    client = FakeClient()
+    publish_status(
+        VisionPublisher(client),
+        "healthy",
+        stable_count=3,
+        stable_zone_counts=[1, 2, 0, 0, 0, 0],
+        current_zone_counts=[1, 1, 1, 0, 0, 0],
+        debounced_zone_counts=[1, 2, 0, 0, 0, 0],
+        frame_fps=25.0,
+        latency_ms=12.0,
+        counting_mode="zone-count",
+    )
+    by_topic = {args[0]: json.loads(args[1]) if args[1].startswith("{") else args[1] for args, _kwargs in client.calls}
+    assert by_topic["lab/vision/people_count"]["counting_mode"] == "zone-count"
+    assert by_topic["lab/vision/people_count"]["zone_counts"] == [1, 2, 0, 0, 0, 0]
+    assert by_topic["lab/vision/raw_people_count"]["raw_zone_counts"] == [1, 1, 1, 0, 0, 0]
+
+
+def test_counting_mode_validation():
+    assert normalize_counting_mode(None) == "total-count"
+    assert normalize_counting_mode("ZONE-COUNT") == "zone-count"
+    try:
+        normalize_counting_mode("zones")
+        assert False
+    except ValueError:
+        pass
+
+
 def test_debounced_people_count_prevents_fast_zero_two_flicker():
     debouncer = DebouncedPeopleCount(stable_seconds=2, zero_hold_seconds=6)
     assert debouncer.update([0, 0, 0, 0, 0, 0], 0, True) == [0, 0, 0, 0, 0, 0]
@@ -434,6 +511,58 @@ def test_bottom_center_point_and_zone_assignment_pipeline():
     assert assignments[3]["zone"] is None
 
 
+def test_total_people_assignments_counts_people_without_zones():
+    class Boxes:
+        def __init__(self):
+            self.xyxy = FakeTensor([[10, 20, 50, 100], [60, 30, 100, 120], [0, 0, 10, 10]])
+            self.id = FakeTensor([1, 2, 3])
+            self.conf = FakeTensor([0.9, 0.8, 0.7])
+            self.cls = FakeTensor([0, 0, 2])
+
+    class Result:
+        def __init__(self):
+            self.boxes = Boxes()
+
+    count, assignments = total_people_assignments(Result())
+    assert count == 2
+    assert [assignment["zone"] for assignment in assignments] == [None, None]
+    assert assignments[0]["bottom_center"] == (30, 100)
+
+
+def test_display_modes_choose_clean_or_debug_overlay(monkeypatch):
+    import numpy as np
+    import src.main as main_module
+
+    calls = []
+
+    def fake_total(frame, stable_count, frame_fps, source_status, counting_mode="total-count"):
+        calls.append(("total", stable_count, counting_mode))
+
+    def fake_debug(*args, **kwargs):
+        calls.append(("debug",))
+
+    monkeypatch.setattr(main_module, "draw_total_count_overlay", fake_total)
+    monkeypatch.setattr(main_module, "draw_detection_overlay", fake_debug)
+    frame = np.zeros((120, 160, 3), dtype=np.uint8)
+    common = dict(
+        frame=frame,
+        assignments=[{"box": [1, 2, 3, 4], "zone": 1}],
+        zones=[[(0, 0), (10, 0), (10, 10)]],
+        current_zone_counts=[1, 0, 0, 0, 0, 0],
+        stable_zone_counts=[1, 0, 0, 0, 0, 0],
+        stable_count=1,
+        frame_fps=25,
+        latency_ms=10,
+        source_status="healthy",
+        window_samples=3,
+        seconds_until_report=57,
+        debounced_zone_counts=[1, 0, 0, 0, 0, 0],
+    )
+    render_display_frame(counting_mode="total-count", **common)
+    render_display_frame(counting_mode="zone-count", **common)
+    assert calls == [("total", 1, "total-count"), ("debug",)]
+
+
 def test_each_zone_has_representative_point_and_out_of_zone_returns_none():
     zones = load_zones(str(ROOT / "config" / "zones.json"))
     points = {
@@ -477,6 +606,7 @@ def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     status_script = (ROOT / "status_lab_automation.ps1").read_text()
     startup_doc = (ROOT / "docs/startup-and-shutdown.md").read_text()
     main_py = (ROOT / "ai-pc/src/main.py").read_text()
+    config_yaml = (ROOT / "config/config.yaml").read_text()
 
     assert ".venv\\Scripts\\python.exe" in start_script
     assert "config\\config.yaml" in start_script
@@ -488,6 +618,8 @@ def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     assert "rtsp://hari:8554/labcam" not in start_script  # config-driven, not hard-coded
     assert "src.main" in start_script
     assert "--display" in start_script
+    assert "CountingMode" in start_script
+    assert "--counting-mode" in start_script
     assert "logs\\ai-publisher" in start_script
     assert "did not change automation mode" in start_script
     assert "lab/control" not in start_script
@@ -501,12 +633,17 @@ def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     assert "ai_publisher_display" in status_script
 
     assert 'parser.add_argument("--display"' in main_py
+    assert 'parser.add_argument("--counting-mode"' in main_py
     assert "cv2.imshow" in main_py
     assert "Stable Count:" in main_py
     assert "Current Zone Counts:" in main_py
     assert "Stable Zone Counts:" in main_py
     assert "Published Count:" in main_py
     assert "Source:" in main_py
+    assert "Mode: {counting_mode}" in main_py
+    assert "draw_total_count_overlay" in main_py
+    assert "draw_detection_overlay" in main_py
+    assert "counting_mode: total-count" in config_yaml
 
     assert ".\\start_lab_automation.ps1 -DryRun" in startup_doc
     assert ".\\start_lab_automation.ps1 -Display" in startup_doc
@@ -518,6 +655,9 @@ def test_node_red_auto_uses_stable_people_count_not_zone_counts():
     fn_node = next(node for node in flow if node.get("type") == "function" and node.get("name") == "Priority Safety Controller")
     func = fn_node["func"]
     assert "const count=Number(payload&&payload.stable_count)" in func
+    assert "AUTOMATION_COUNT_SOURCE = 'total-count'" in func
+    assert "lab/automation/status','online',true" in func
+    assert "lab/automation/count_source" in func
     assert "stageFor(count)" in func
     assert "payload.zone_counts" not in func
     assert "payload&&payload.zone_counts" not in func

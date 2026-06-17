@@ -45,6 +45,7 @@ Status: Software validation complete
 - AI publisher safety: refuses relay/control/set/command topics
 - Live deployment contract update: AI telemetry now targets `lab/vision/...` topics consumed by the current `labos` Node-RED runtime.
 - Current Auto decision contract: Node-RED uses total debounced `lab/vision/people_count.stable_count` only. Zone counts remain provisional diagnostics and do not drive relay commands.
+- AI counting modes: `total-count` is the current Auto-ready mode and does not require valid zones; `zone-count` is available for debug/future zone automation and requires `config/zones.json`.
 - People-count Auto rules: `0` people triggers delayed OFF, `1` person turns both lights ON, `2-3` people turns both lights plus Fan 1/Fan 4 ON, and `4+` people turns both lights plus all fans ON.
 - Monitor-mode software tests: zero relay commands
 - Relay mapping logic and fan OR rules: validated in tests
@@ -165,6 +166,7 @@ Status: Hardware deployment pending
 - Outside-window timetable fallback was verified live as `TIMETABLE_HOLD`.
 - Healthy people-count path was verified live in Monitor mode through `intended_state` output with zero relay commands.
 - People-count-only Auto mapping is covered by tests against both the Python priority controller and the repo Node-RED function source; the Node-RED function reads `stable_count` and does not consume `zone_counts` for relay decisions.
+- Repo Node-RED flow now publishes retained `lab/automation/status = online` and `lab/automation/count_source = total-count` whenever controller diagnostics are emitted.
 - Inside-window timetable fallback still needs a live validation pass during an active class window.
 - Follow-up debug confirmed the correct live mode command is plain retained string payloads on `lab/automation/mode` such as `auto`; the earlier failed Auto confirmation was caused by reading the stale retained `mode_state=manual` message before the fresh `mode_state=auto` event arrived.
 - A later live validation confirmed that stale or unhealthy vision does not force `mode_state` back to `manual`; `mode_state` stayed `auto` while `priority_state` moved through `VISION_STALE` and `TIMETABLE_HOLD`.

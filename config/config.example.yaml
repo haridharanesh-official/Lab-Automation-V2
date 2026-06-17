@@ -1,4 +1,5 @@
 mode: monitor
+counting_mode: total-count
 camera:
   url: rtsp://hari:8554/labcam
   reconnect_seconds: 5

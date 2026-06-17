@@ -14,6 +14,10 @@ Priority order implemented in the repo flow:
 
 Current Auto behavior is people-count-only. The flow reads `lab/vision/people_count.stable_count` and ignores `zone_counts` for relay decisions until zone calibration is physically validated.
 
+The retained diagnostic topic `lab/automation/count_source` should be `total-count`. `zone-count` automation remains a future source mode only; the AI can publish zone counts for calibration, but this flow does not use them for relay decisions yet.
+
+The flow also publishes retained `lab/automation/status = online` so Home Assistant does not keep a stale `offline` automation status.
+
 Stage rules:
 - `0` people: controlled loads OFF only after the empty/off delay
 - `1` person: both lights ON

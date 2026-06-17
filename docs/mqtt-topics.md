@@ -32,6 +32,12 @@ Rules: AI may publish only under `lab/vision/#`; AI must never publish control o
 - `zone_counts`: debounced zone counts for display/debug only during the current people-count Auto phase.
 - `raw_total_count` and `raw_zone_counts`: the current detection values included for context.
 - `window_stable_count` and `window_zone_counts`: the rolling reporting-window median values.
+- `counting_mode`: `total-count` or `zone-count`.
+
+Counting modes:
+
+- `total-count`: AI runs on the full frame, counts total people, does not require valid zone polygons, publishes `stable_count`, and sets zone fields to `null`.
+- `zone-count`: AI runs on the full frame, assigns people to zones by bottom-centre point, publishes `stable_count` and `zone_counts`, and requires `config/zones.json`.
 
 Current Auto logic on `labos` uses only `stable_count`:
 

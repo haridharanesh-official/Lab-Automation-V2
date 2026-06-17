@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [switch]$DryRun,
-    [switch]$Display
+    [switch]$Display,
+    [ValidateSet("total-count", "zone-count")]
+    [string]$CountingMode
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,6 +54,7 @@ function Get-ConfigValues {
     $mqttHost = $null
     $mqttPort = $null
     $heartbeatSeconds = $null
+    $countingMode = $null
     $section = ""
 
     foreach ($line in Get-Content -LiteralPath $configPath) {
@@ -65,6 +68,7 @@ function Get-ConfigValues {
             $section = ""
             switch ($key) {
                 "mode" { $mode = $value }
+                "counting_mode" { $countingMode = $value }
                 "heartbeat_seconds" { $heartbeatSeconds = [double]$value }
             }
             continue
@@ -91,11 +95,15 @@ function Get-ConfigValues {
     if (-not $heartbeatSeconds) {
         $heartbeatSeconds = 10
     }
+    if (-not $countingMode) {
+        $countingMode = "total-count"
+    }
     return [pscustomobject]@{
         mqtt_host = $mqttHost
         mqtt_port = $mqttPort
         camera_url = $cameraUrl
         mode = $mode
+        counting_mode = $countingMode
         heartbeat_seconds = $heartbeatSeconds
     }
 }
@@ -201,14 +209,23 @@ Write-Host $repoRoot
 Write-Section "Required Files"
 Assert-File $pythonPath "Python venv interpreter"
 Assert-File $configPath "Runtime config"
-Assert-File $zonesPath "Zone map"
 Assert-File $modelPath "Production model"
 Assert-File $mainPath "AI publisher entrypoint"
 
 $config = Get-ConfigValues
+$effectiveCountingMode = if ($CountingMode) { $CountingMode } else { $config.counting_mode }
+if ($effectiveCountingMode -notin @("total-count", "zone-count")) {
+    Fail "counting_mode must be total-count or zone-count. Current value: $effectiveCountingMode"
+}
+if ($effectiveCountingMode -eq "zone-count") {
+    Assert-File $zonesPath "Zone map"
+} else {
+    Write-Host "[OK] Zone map not required for total-count mode" -ForegroundColor Green
+}
 if ($config.mode.ToLowerInvariant() -ne "monitor") {
     Fail "config/config.yaml must keep mode=monitor for this startup path. Current value: $($config.mode)"
 }
+Write-Host "[OK] Counting mode -> $effectiveCountingMode" -ForegroundColor Green
 
 Write-Section "Network Checks"
 if (-not (Test-TcpEndpoint -HostName $config.mqtt_host -Port $config.mqtt_port)) {
@@ -258,7 +275,8 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logPath = Join-Path $logDir "$timestamp.log"
 $displayArg = if ($Display) { " --display" } else { "" }
-$runnerCommand = "& '$pythonPath' -m src.main --config 'config/config.yaml'$displayArg *>> '$logPath'"
+$countingModeArg = " --counting-mode '$effectiveCountingMode'"
+$runnerCommand = "& '$pythonPath' -m src.main --config 'config/config.yaml'$displayArg$countingModeArg *>> '$logPath'"
 
 Write-Section "Start Publisher"
 $env:PYTHONPATH = "ai-pc"
@@ -273,12 +291,14 @@ $metadata = [pscustomobject]@{
     started_at = (Get-Date).ToString("s")
     log_path = $logPath
     display = [bool]$Display
+    counting_mode = $effectiveCountingMode
 }
 $metadata | ConvertTo-Json | Set-Content -LiteralPath $pidFile
 
 Write-Host "[OK] AI publisher started with wrapper PID $($process.Id)" -ForegroundColor Green
 Write-Host "Log: $logPath"
 Write-Host "Display mode: $([bool]$Display)"
+Write-Host "Counting mode: $effectiveCountingMode"
 if ($Display) {
     Write-Host "A live OpenCV overlay window will open in the launched publisher session. Close it with 'q' or Ctrl+C." -ForegroundColor Green
 }

@@ -55,6 +55,17 @@ The AI publisher **must never** publish relay commands. It is blocked from `lab/
 
 `lab/vision/people_count` is intentionally debounced for HA and Node-RED. Brief missed detections do not immediately publish zero, and the last known good count is preserved during camera/AI uncertainty. `lab/vision/raw_people_count` may move faster and is useful only for diagnostics.
 
+The AI publisher supports two runtime counting modes:
+- `total-count`: runs the model on the full frame and publishes only the debounced total count for automation. Zone polygons are not required. Display mode shows clean footage with a small status/count overlay only.
+- `zone-count`: runs the model on the full frame, assigns each person by bottom-centre point to `config/zones.json`, and publishes total plus zone counts. Display mode shows full debug overlays with boxes, tracker IDs, confidence, polygons, foot points, and assigned zones.
+
+Run examples:
+
+```powershell
+.\start_lab_automation.ps1 -Display -CountingMode total-count
+.\start_lab_automation.ps1 -Display -CountingMode zone-count
+```
+
 ## Zone Calibration
 `config/zones.json` is calibrated in live 1280x720 camera-image coordinates, not from the architectural top-down room diagram. Current provisional camera-perspective numbering is:
 - Zone 1: bottom-left / camera-side
@@ -92,7 +103,7 @@ To test a single pixel foot point without opening the camera:
 Node-RED enforces a strict priority order:
 1. **Manual Override**: Highest priority. Overlays manual states over automation.
 2. **Timetable Fallback**: Triggers if vision is stale or unhealthy. Applies a safe state during class hours and delays OFF transitions.
-3. **Healthy People-Count Automation**: Triggers only when the camera and AI are healthy. Current Auto mode uses total debounced people count only; zone counts are diagnostic/provisional and are not used for relay decisions yet.
+3. **Healthy People-Count Automation**: Triggers only when the camera and AI are healthy. Current Auto mode uses total debounced people count only (`automation_count_source = total-count`); zone counts are diagnostic/provisional and are not used for relay decisions yet.
 
 Current people-count Auto rules:
 - `0` people: all controlled loads OFF only after the configured empty delay
