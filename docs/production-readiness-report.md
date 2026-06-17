@@ -224,7 +224,7 @@ Status: Hardware deployment pending
 
 ## Physical Auto-Mode Readiness
 
-Status: Supervised people-count Auto smoke test passed; not fully physically production-ready until all final hardware gates pass
+Status: People-count Auto logic validated; final Auto deployment blocked by relay4 feedback
 
 - A short supervised Auto-mode entry/exit safety check was completed against the deployed `labos` flow.
 - Earlier confusion about `mode_state` was resolved: fresh `lab/automation/mode_state = auto` does publish when captured correctly.
@@ -248,6 +248,15 @@ Status: Supervised people-count Auto smoke test passed; not fully physically pro
   - Manual mode: `mode_state = manual`, accepted AI counts continued, relay `/set` count `0` over 20 seconds
   - final mode returned to `manual`
 - This is strong supervised smoke validation of the people-count path, but full physical production readiness still requires deliberate staged transitions for `1`, `2-3`, `4+`, empty-delay OFF, camera failure, AI failure, MQTT interruption, and ESP32 restart.
+- Final deployment attempt after the smoke validation did not leave Auto enabled. The safety gate blocked deployment because `lab/control/relay4/state` was absent from the Auto state-feedback capture even though `FOUR_PLUS` requires relay 4 / Fan 3 ON.
+- Latest final-gate observations:
+  - AI payload: `counting_mode = total-count`, `zone_counts = null`, `stable_count` present
+  - Monitor mode: `mode_state = monitor`, `intended_state = FOUR_PLUS`, relay `/set` count `0` over 30 seconds
+  - Auto mode: `mode_state = auto`, `priority_state = PEOPLE_COUNT`, `intended_state = FOUR_PLUS`, relay `/set` count `0` because known states already matched desired state
+  - State feedback observed: relays `2`, `3`, `6`, `7`, `8`, `9`, and `10`
+  - State feedback missing: `lab/control/relay4/state`
+  - Manual mode: `mode_state = manual`, relay `/set` count `0`, AI counts continued
+  - Final mode: `manual`
 
 ## Failure-Test Readiness
 
@@ -264,6 +273,7 @@ Status: Hardware deployment pending
 - Reduce or eliminate upstream HEVC reference-frame decode warnings if they affect downstream analytics.
 - Verify ESP32 firmware on real hardware.
 - Verify Home Assistant entities.
+- Confirm relay4/Fan 3 state feedback on `lab/control/relay4/state`.
 - Complete supervised manual relay mapping.
 - Complete live zone calibration.
 - Complete longer supervised Auto-mode transition and failure tests.
