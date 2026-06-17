@@ -199,7 +199,10 @@ Status: Hardware deployment pending
 - This June 17 run reconfirmed the live mode contract over MQTT, but did not directly drive the Home Assistant web selector UI during the session.
 - Live repo/discovery configuration still matches the intended selector contract: command topic `lab/automation/mode`, state topic `lab/automation/mode_state`, options `manual`, `monitor`, `auto`.
 - Ten relay switches, six zone sensors, warning/status/mismatch entities still require live Home Assistant verification.
-- The current `labos` runtime still runs `labos-mock-relay.service`, so this Home Assistant validation covered the UI-to-MQTT-to-Node-RED contract and mock relay path, not physical relay hardware.
+- The final June 17 live check confirmed `labos-mock-relay.service` is disabled and inactive.
+- Stale generic HA discovery topics `homeassistant/switch/lab_relay*/config` were cleared from the broker. The remaining final switch discovery topics are `homeassistant/switch/labos_*/config`.
+- The confirmed live relay contract is `lab/control/relayX/set` with `ON`/`OFF` command payloads and `lab/control/relayX/state` with `ON`/`OFF` feedback payloads.
+- The user reported that Home Assistant can physically control all fans and lights through this MQTT path. Direct authenticated dashboard/API verification remains outside this repo-only report.
 
 ## Zone Calibration Readiness
 
@@ -221,7 +224,7 @@ Status: Hardware deployment pending
 
 ## Physical Auto-Mode Readiness
 
-Status: Not physically production-ready until supervised relay validation passes
+Status: Supervised people-count Auto smoke test passed; not fully physically production-ready until all final hardware gates pass
 
 - A short supervised Auto-mode entry/exit safety check was completed against the deployed `labos` flow.
 - Earlier confusion about `mode_state` was resolved: fresh `lab/automation/mode_state = auto` does publish when captured correctly.
@@ -235,7 +238,16 @@ Status: Not physically production-ready until supervised relay validation passes
 - In the subsequent supervised occupied-scene Auto attempt, fresh `mode_state = auto` was observed, but the AI stream still reported only `stable_count = 0`, so no intended-state scene transitions or relay commands were triggered.
 - In the latest startup/shutdown validation run, Auto was exercised only for safe controller-path checks and was returned to `manual` at the end of the session.
 - A controlled mock-path Auto validation on June 17, 2026 observed two relay `/set` messages on the mock path (`relay7 ON`, then `relay7 OFF`) while final mode was returned to `manual`.
-- This remains mock-path validation only because `labos-mock-relay.service` is still active and no real ESP32/light/fan hardware claim was made.
+- Final supervised live finisher validation on June 17, 2026 confirmed:
+  - `labos-mock-relay.service` disabled/inactive
+  - stale generic HA discovery topics removed
+  - AI `lab/vision/people_count` payload fresh with `stable_count = 4`, `counting_mode = total-count`, and `zone_counts = null`
+  - Monitor mode: `mode_state = monitor`, `intended_state = FOUR_PLUS`, relay `/set` count `0` over 30 seconds
+  - Auto mode: `mode_state = auto`, `priority_state = PEOPLE_COUNT`, `intended_state = FOUR_PLUS`, desired relays `2,3,4,6,7,8 = ON`
+  - Auto relay `/set` count in the final window was `0` because current/known relay states already matched the desired ON state; a prior supervised smoke window observed `lab/control/relay7/set ON` and `lab/control/relay7/state ON`
+  - Manual mode: `mode_state = manual`, accepted AI counts continued, relay `/set` count `0` over 20 seconds
+  - final mode returned to `manual`
+- This is strong supervised smoke validation of the people-count path, but full physical production readiness still requires deliberate staged transitions for `1`, `2-3`, `4+`, empty-delay OFF, camera failure, AI failure, MQTT interruption, and ESP32 restart.
 
 ## Failure-Test Readiness
 
@@ -254,4 +266,4 @@ Status: Hardware deployment pending
 - Verify Home Assistant entities.
 - Complete supervised manual relay mapping.
 - Complete live zone calibration.
-- Complete supervised Auto-mode and failure tests.
+- Complete longer supervised Auto-mode transition and failure tests.

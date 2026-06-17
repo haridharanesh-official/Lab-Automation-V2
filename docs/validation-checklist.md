@@ -118,8 +118,18 @@ Status labels:
 - [x] Complete 10-15 minute empty-lab Monitor validation with repeated `stable_count = 0`, zero false positives, and zero relay `/set` commands.
 - [x] Complete live monitor-mode simulator validation with zero relay `/set` commands.
 - [x] Complete live auto-mode mock-path simulator validation with final mode returned to Manual.
-- [ ] Complete full supervised Auto-mode validation with occupied-scene relay changes.
-- [ ] Complete supervised occupied-scene Auto validation with non-zero stable counts observed on live `lab/vision/people_count`.
+- [x] Complete supervised people-count Auto smoke validation with non-zero `stable_count = 4`, `FOUR_PLUS` intended state, final mode returned to Manual, and no repeated relay command spam.
+- [ ] Complete full supervised Auto-mode validation with deliberate occupied-scene relay transitions for `1`, `2-3`, `4+`, and empty-delay OFF cases.
+- [x] Complete supervised occupied-scene Auto validation with non-zero stable counts observed on live `lab/vision/people_count`.
 - [x] Complete supervised Auto-mode entry/exit safety check with final mode returned to Manual.
 - [ ] Complete a cleaner live stale-vision fallback validation without noisy mock-relay/manual-override diagnostics.
 - [ ] Complete live failure tests.
+
+## Final June 17 Live Finisher
+- [x] Confirmed `labos-mock-relay.service` is disabled and inactive.
+- [x] Confirmed stale generic HA discovery topics `homeassistant/switch/lab_relay*/config` are absent.
+- [x] Confirmed final HA discovery topics `homeassistant/switch/labos_*/config` remain and use `lab/control/relayX/set` plus `lab/control/relayX/state`.
+- [x] Confirmed AI `lab/vision/people_count` payload contains `stable_count`, `counting_mode = total-count`, and `zone_counts = null`.
+- [x] Confirmed Monitor mode produced `0` relay `/set` commands over at least 30 seconds.
+- [x] Confirmed Manual mode produced `0` relay `/set` commands while AI counts continued.
+- [x] Applied live-only relay ack monitor parser fix on `labos`; repo does not contain that service source.
