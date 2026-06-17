@@ -12,6 +12,14 @@ Priority order implemented in the repo flow:
 2. timetable fallback
 3. healthy people-count automation
 
+Current Auto behavior is people-count-only. The flow reads `lab/vision/people_count.stable_count` and ignores `zone_counts` for relay decisions until zone calibration is physically validated.
+
+Stage rules:
+- `0` people: controlled loads OFF only after the empty/off delay
+- `1` person: both lights ON
+- `2-3` people: both lights + Fan 1 + Fan 4 ON
+- `4+` people: both lights + all fans ON
+
 Manual override clear topic:
 
 - `lab/automation/manual_override/clear`

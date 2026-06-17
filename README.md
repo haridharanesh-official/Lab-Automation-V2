@@ -92,7 +92,13 @@ To test a single pixel foot point without opening the camera:
 Node-RED enforces a strict priority order:
 1. **Manual Override**: Highest priority. Overlays manual states over automation.
 2. **Timetable Fallback**: Triggers if vision is stale or unhealthy. Applies a safe state during class hours and delays OFF transitions.
-3. **Healthy Automation**: Triggers only when the camera and AI are healthy. Emits no-flicker state changes based on people count.
+3. **Healthy People-Count Automation**: Triggers only when the camera and AI are healthy. Current Auto mode uses total debounced people count only; zone counts are diagnostic/provisional and are not used for relay decisions yet.
+
+Current people-count Auto rules:
+- `0` people: all controlled loads OFF only after the configured empty delay
+- `1` person: both lights ON
+- `2-3` people: both lights plus Fan 1 and Fan 4 ON
+- `4+` people: both lights plus all fans ON
 
 ## Operating Modes
 - `manual`: Safest mode. Node-RED ignores AI count and never emits relay `/set`. This is the final safe mode.

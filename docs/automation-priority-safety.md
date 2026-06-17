@@ -143,7 +143,7 @@ When mode is `auto` and vision becomes stale or unhealthy:
 
 ## People-Count Automation
 
-People-count automation is used only when vision is healthy.
+People-count automation is used only when vision is healthy. This is the active Auto behavior for now: Node-RED uses the total debounced count from `lab/vision/people_count.stable_count`, not per-zone counts.
 
 Healthy means:
 
@@ -151,6 +151,8 @@ Healthy means:
 - source status is healthy
 - heartbeat is fresh
 - `lab/vision/people_count` is fresh
+
+Zone mapping remains provisional and is used for display/debug validation only. `zone_counts` may be present in the payload, but it must not drive Auto relay decisions until zone calibration is physically validated.
 
 The current stage mapping remains:
 
@@ -161,9 +163,10 @@ The current stage mapping remains:
 
 Relay mapping for the deployed `labos` runtime:
 
-- `ONE` => relays `2, 7`
-- `TWO_THREE` => relays `2, 3, 6, 7`
-- `FOUR_PLUS` => relays `2, 3, 4, 6, 7, 8`
+- `EMPTY` => relays `2, 3, 4, 6, 7, 8` OFF only after the configured empty delay
+- `ONE` => both lights ON: relays `2, 7`
+- `TWO_THREE` => both lights + Fan 1 + Fan 4 ON: relays `2, 3, 6, 7`
+- `FOUR_PLUS` => both lights + all fans ON: relays `2, 3, 4, 6, 7, 8`
 
 ## No-Flicker and Safety Rules
 

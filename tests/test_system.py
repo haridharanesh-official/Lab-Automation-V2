@@ -331,6 +331,53 @@ def test_priority_controller_healthy_people_count_drives_automation():
     assert third["stage"] == "TWO_THREE"
 
 
+def test_people_count_auto_stage_relay_rules_ignore_zone_counts():
+    controller = PrioritySafetyController(mode="auto")
+    controller.stable_reads_required = 1
+    controller.min_change_ms = 0
+    now = datetime(2026, 6, 16, 9, 5, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+
+    cases = [
+        (0, "ZERO_HOLD", desired_lab_relays_for_stage("EMPTY")),
+        (1, "ONE", desired_lab_relays_for_stage("ONE")),
+        (2, "TWO_THREE", desired_lab_relays_for_stage("TWO_THREE")),
+        (3, "TWO_THREE", desired_lab_relays_for_stage("TWO_THREE")),
+        (4, "FOUR_PLUS", desired_lab_relays_for_stage("FOUR_PLUS")),
+        (8, "FOUR_PLUS", desired_lab_relays_for_stage("FOUR_PLUS")),
+    ]
+    for index, (count, expected_stage, expected_relays) in enumerate(cases):
+        payload = {
+            "timestamp": now_ms + index,
+            "stable_count": count,
+            "total_count": count,
+            "zone_counts": [0, 99, 0, 99, 0, 99],
+            "source_healthy": True,
+            "status": "online",
+        }
+        result = controller.process_people_count(payload, datetime.fromtimestamp((now_ms + index) / 1000))
+        assert result["stage"] == expected_stage
+        assert result["wanted"] == expected_relays
+
+
+def test_people_count_stage_relay_mapping_matches_current_auto_contract():
+    assert desired_lab_relays_for_stage("EMPTY") == {
+        2: "OFF", 3: "OFF", 4: "OFF", 6: "OFF", 7: "OFF", 8: "OFF"
+    }
+    assert desired_lab_relays_for_stage("ONE") == {
+        2: "ON", 3: "OFF", 4: "OFF", 6: "OFF", 7: "ON", 8: "OFF"
+    }
+    assert desired_lab_relays_for_stage("TWO_THREE") == {
+        2: "ON", 3: "ON", 4: "OFF", 6: "ON", 7: "ON", 8: "OFF"
+    }
+    assert desired_lab_relays_for_stage("FOUR_PLUS") == {
+        2: "ON", 3: "ON", 4: "ON", 6: "ON", 7: "ON", 8: "ON"
+    }
+
+
 def test_priority_controller_auto_stale_vision_keeps_mode_and_uses_fallback():
     controller = PrioritySafetyController(mode="auto")
     controller.mark_service_status("offline")
@@ -464,3 +511,13 @@ def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     assert ".\\start_lab_automation.ps1 -DryRun" in startup_doc
     assert ".\\start_lab_automation.ps1 -Display" in startup_doc
     assert ".\\stop_lab_automation.ps1" in startup_doc
+
+
+def test_node_red_auto_uses_stable_people_count_not_zone_counts():
+    flow = json.loads((ROOT / "node-red/flows.json").read_text())
+    fn_node = next(node for node in flow if node.get("type") == "function" and node.get("name") == "Priority Safety Controller")
+    func = fn_node["func"]
+    assert "const count=Number(payload&&payload.stable_count)" in func
+    assert "stageFor(count)" in func
+    assert "payload.zone_counts" not in func
+    assert "payload&&payload.zone_counts" not in func

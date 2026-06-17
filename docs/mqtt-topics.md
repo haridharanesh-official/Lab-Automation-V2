@@ -29,9 +29,18 @@ Rules: AI may publish only under `lab/vision/#`; AI must never publish control o
 `lab/vision/people_count` is the stable/debounced count for Home Assistant and Node-RED. It carries:
 
 - `stable_count` and `total_count`: the debounced count used by HA and automation.
-- `zone_counts`: debounced zone counts.
+- `zone_counts`: debounced zone counts for display/debug only during the current people-count Auto phase.
 - `raw_total_count` and `raw_zone_counts`: the current detection values included for context.
 - `window_stable_count` and `window_zone_counts`: the rolling reporting-window median values.
+
+Current Auto logic on `labos` uses only `stable_count`:
+
+- `0` people: all controlled loads OFF only after empty/off delay.
+- `1` person: both lights ON.
+- `2-3` people: both lights + Fan 1 + Fan 4 ON.
+- `4+` people: both lights + all fans ON.
+
+Zone mapping remains provisional and must not be used for production relay decisions until zone-by-zone validation passes.
 
 `lab/vision/raw_people_count` is a diagnostic topic. It may change faster because it represents the current detection frame/window and must not be used as the primary Home Assistant people-count sensor or automation trigger.
 

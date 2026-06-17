@@ -70,6 +70,8 @@ Status labels:
 - [x] Verified Manual mode emits zero relay `/set` commands during live AI publishing.
 - [x] Verified Monitor mode processes live people count into intended-state diagnostics with zero relay `/set` commands.
 - [x] Performed a short safe Auto logic check: fresh `mode_state = auto` confirmed, people-count path selected, final mode returned to `manual`, and no relay `/set` messages were captured during the short check.
+- [x] Locked current Auto behavior to total people count only. Node-RED reads `lab/vision/people_count.stable_count`; `zone_counts` remains diagnostic/provisional and is not used for relay decisions.
+- [x] Added tests for people-count Auto rules: `0` delayed OFF, `1` both lights, `2-3` both lights + Fan 1/Fan 4, `4+` both lights + all fans.
 - [x] Repo flow now models priority order: manual override > timetable fallback > healthy people-count automation.
 - [x] Repo flow now documents manual override clear topic and timetable fallback windows.
 - [x] Verified stale or unhealthy vision no longer forces `mode_state` back to `manual`.
