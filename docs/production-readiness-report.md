@@ -168,15 +168,17 @@ Status: Hardware deployment pending
 
 Status: Hardware deployment pending
 
-- Existing `config/zones.json` now uses rough slanted perspective polygons from the user-marked back-camera reference.
-- Zone numbering was updated to the latest physical-layout reference: near the door/top row is Zones 1, 2, 3 left-to-right, and the lower row is Zones 4, 5, 6 left-to-right from the camera view.
-- The previous Zone 1/Zone 2 orientation was not safe for Auto and was replaced with an improved initial 1280x720 calibration.
+- Existing `config/zones.json` now uses improved initial polygons in live 1280x720 camera-image coordinates.
+- Zone numbering is from the live camera perspective, not the architectural top-down room diagram: Zone 1 bottom-left/camera-side, Zone 2 middle-right/lower-mid, Zone 3 left/mid visible working area, Zone 4 top-right, Zone 5 upper-middle, Zone 6 top-left.
+- The previous top-down/room-layout interpretation was not safe for Auto and was replaced with an improved initial camera-perspective calibration.
 - Approximate zone centers and sample foot-points map uniquely in software.
 - Shared boundary ambiguity is documented.
 - Ten-minute live model validation saw 59.20% zone-boundary uncertainty with the provisional grid.
 - Ten-minute live people-count validation saw 36.32% zone-boundary uncertainty with the provisional grid.
 - Live validation with the corrected slanted zones still needs to be rerun after the interrupted calibration pass.
 - The new calibration remains approximate and must be verified in live occupied scenes before Auto is trusted.
+- The old top-down room diagram must not be used directly for image polygon calibration; all final points must be clicked or verified in the camera frame.
+- Short display-mode validation after this correction opened the live stream and confirmed `lab/vision/#` traffic only with zero observed `lab/control/+/set` messages. The current scene did not match the earlier four-person screenshot; stable count held at 3 while raw diagnostics briefly reached 4, so the four-person zone assignment still needs a matching occupied live scene to verify visually.
 - Door, seated people, occlusion, and real boundaries are not physically verified.
 - Do not update final zone configuration until supervised live validation passes.
 

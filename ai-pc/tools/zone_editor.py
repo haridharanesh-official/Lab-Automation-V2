@@ -1,4 +1,12 @@
-"""Polygon editor: 1-6 select, left-click add/test, right-click undo, L load, R reset, S save, Q quit."""
+"""Camera-perspective polygon editor.
+
+Zone numbers are defined in the 1280x720 camera image, not in a top-down room
+diagram: Z1 bottom-left/camera-side, Z2 middle-right/lower-mid, Z3 left/mid,
+Z4 top-right, Z5 upper-middle, Z6 top-left.
+
+Controls: 1-6 select, left-click add/test, right-click undo, L load, R reset,
+S save, T test point, Q quit.
+"""
 from __future__ import annotations
 
 import argparse
@@ -18,7 +26,12 @@ def validate_zones(zones: list[list[list[int]]]) -> None:
 
 def save_zones(path: str, zones: list[list[list[int]]]) -> None:
     validate_zones(zones)
-    Path(path).write_text(json.dumps({"zones": zones}, indent=2))
+    note = (
+        "Camera-perspective 1280x720 calibration. Zone 1 bottom-left/camera-side, "
+        "Zone 2 middle-right/lower-mid, Zone 3 left/mid working area, Zone 4 top-right, "
+        "Zone 5 upper-middle, Zone 6 top-left. Approximate until supervised live click calibration passes."
+    )
+    Path(path).write_text(json.dumps({"note": note, "zones": zones}, indent=2))
 
 
 def main() -> None:
@@ -57,8 +70,10 @@ def main() -> None:
             if len(polygon) >= 3:
                 cv2.polylines(canvas, [__import__("numpy").array(polygon)], True,
                               (0, 255, 255) if i == selected else (0, 255, 0), 2)
+        cv2.putText(canvas, "Camera perspective: Z1 bottom-left, Z4 top-right, Z6 top-left",
+                    (15, 25), cv2.FONT_HERSHEY_SIMPLEX, .55, (255, 255, 255), 2)
         cv2.putText(canvas, f"Zone {selected + 1} | {'TEST' if test_mode else 'EDIT'} | {test_result}",
-                    (15, 25), cv2.FONT_HERSHEY_SIMPLEX, .6, (255, 255, 255), 2)
+                    (15, 50), cv2.FONT_HERSHEY_SIMPLEX, .6, (255, 255, 255), 2)
         cv2.imshow("zones", canvas)
         key = cv2.waitKey(30) & 0xFF
         if ord("1") <= key <= ord("6"):

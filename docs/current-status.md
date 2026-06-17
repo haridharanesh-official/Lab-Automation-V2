@@ -17,6 +17,8 @@ Lab Automation v2.0 is currently in the **validation phase**. Software validatio
   - 0 relay `/set` commands issued
 - **Count Contract Fix**: The live display/count path now separates current zone counts from rolling stable counts. `lab/vision/people_count` is debounced for HA/Node-RED, while `lab/vision/raw_people_count` is diagnostic only.
 - **HA Count Flicker Investigation**: Live `labos` service/code inspection found no active second publisher for `lab/vision/people_count`; the passive legacy bridge and system-health service subscribe only. The live AI PC did have orphaned `src.main` publisher children after stopping only the PowerShell wrapper, which created duplicate AI publisher streams. The startup/shutdown scripts were hardened to detect and stop matching child/orphan publishers.
+- **Zone Perspective Correction**: `config/zones.json` now uses the live camera-image perspective: Zone 1 bottom-left/camera-side, Zone 2 middle-right/lower-mid, Zone 3 left/mid working area, Zone 4 top-right, Zone 5 upper-middle, Zone 6 top-left. The old top-down room diagram is not directly usable for image polygons.
+- **Latest Zone Live Check**: Display-mode validation opened `rtsp://hari:8554/labcam`, published only `lab/vision/#`, and observed zero `lab/control/+/set` messages. The current scene no longer matched the earlier four-person view; stable `lab/vision/people_count` held at 3 while raw diagnostics briefly reached 4, showing debounce behavior rather than HA flicker.
 - **Tests**: 34/34 tests passing after the count-path and zone-debug update.
 - **Node-RED**: Strict priority-safety flow deployed on `labos`, consuming `lab/...` topics.
 - **Mode Handling**: Auto selection now stays `auto` even when vision becomes stale; stale vision changes only `priority_state` to timetable fallback/hold behavior.
@@ -37,7 +39,7 @@ The system is **not production-ready** until we complete:
 1. Occupied-scene Monitor validation when a person is visible.
 2. Supervised Auto validation with people in the room.
 3. Physical light/fan mapping confirmation with the ESP32.
-4. Supervised live click calibration to replace the improved but still provisional zone polygons.
+4. Supervised live click calibration to verify or replace the improved but still provisional camera-perspective zone polygons.
 
 ---
 *If you are new to this codebase, please review the [Project Explained for Beginners](file:///c:/Users/prith/Downloads/Lab%20Automation%20v2.0/docs/project-explained-for-beginners.md) guide.*

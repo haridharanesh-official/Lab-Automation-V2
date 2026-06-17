@@ -1,11 +1,11 @@
 {
-  "note": "Improved initial 1280x720 live-frame calibration, June 17 2026. Zone numbering follows the latest physical layout request: top row left-to-right is 1,2,3 and bottom row left-to-right is 4,5,6. This is still approximate and must be replaced by supervised live click calibration before Auto is trusted.",
+  "note": "Improved initial 1280x720 live-frame calibration, June 17 2026. Zone numbering is from the live camera image perspective, not the architectural top-down room diagram: Zone 1 bottom-left/camera-side, Zone 2 middle-right/lower-mid, Zone 3 left/mid working area, Zone 4 top-right, Zone 5 upper-middle, Zone 6 top-left. This remains approximate and must be replaced by supervised live click calibration before Auto is trusted.",
   "zones": [
-    [[0, 170], [150, 140], [360, 235], [430, 390], [110, 470], [0, 360]],
-    [[360, 235], [650, 180], [760, 320], [430, 390]],
-    [[650, 180], [1120, 120], [1280, 220], [1280, 420], [760, 320]],
-    [[0, 470], [110, 470], [430, 390], [640, 720], [0, 720]],
-    [[430, 390], [760, 320], [910, 720], [640, 720]],
-    [[760, 320], [1280, 420], [1280, 720], [910, 720]]
+    [[0, 520], [170, 550], [430, 470], [760, 720], [0, 720]],
+    [[500, 310], [780, 230], [1280, 360], [1280, 720], [760, 720], [430, 470]],
+    [[0, 310], [330, 270], [500, 310], [430, 470], [170, 550], [0, 520]],
+    [[760, 0], [1280, 0], [1280, 360], [780, 230]],
+    [[360, 0], [760, 0], [780, 230], [500, 310], [500, 180]],
+    [[0, 0], [360, 0], [500, 180], [330, 270], [0, 310]]
   ]
 }

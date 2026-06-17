@@ -55,6 +55,17 @@ The AI publisher **must never** publish relay commands. It is blocked from `lab/
 
 `lab/vision/people_count` is intentionally debounced for HA and Node-RED. Brief missed detections do not immediately publish zero, and the last known good count is preserved during camera/AI uncertainty. `lab/vision/raw_people_count` may move faster and is useful only for diagnostics.
 
+## Zone Calibration
+`config/zones.json` is calibrated in live 1280x720 camera-image coordinates, not from the architectural top-down room diagram. Current provisional camera-perspective numbering is:
+- Zone 1: bottom-left / camera-side
+- Zone 2: middle-right / lower-mid
+- Zone 3: left/mid visible working area
+- Zone 4: top-right
+- Zone 5: upper-middle
+- Zone 6: top-left
+
+The current polygons are an improved initial calibration only. Do not trust physical Auto mode until live occupied-scene zone assignment is verified with people standing, seated, moving, and near boundaries.
+
 ## Node-RED Safety Logic
 Node-RED enforces a strict priority order:
 1. **Manual Override**: Highest priority. Overlays manual states over automation.
@@ -142,6 +153,7 @@ June 17, 2026 startup validation notes:
 - Deployed Node-RED flow correctly processes `lab/vision/people_count`.
 - Empty-lab stability test: 11 minutes in Monitor mode yielded repeated `stable_count = 0` and no relay changes.
 - June 17 count-path fix: live display now separates current zone counts from stable/window counts, draws bottom-centre assignment points, and publishes debounced `lab/vision/people_count` separately from raw `lab/vision/raw_people_count`.
+- June 17 zone correction: zone polygons were changed to live camera-perspective numbering; the old top-down room diagram is not directly usable for image polygons.
 
 ## Next Validation Step
 1. Occupied-scene Monitor validation when a person is visible.

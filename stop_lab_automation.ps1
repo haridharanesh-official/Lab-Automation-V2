@@ -42,7 +42,7 @@ function Stop-KnownPublisherProcesses([int[]]$PreferredPids) {
     foreach ($id in @($pidSet.Keys | Sort-Object -Descending)) {
         $process = Get-Process -Id $id -ErrorAction SilentlyContinue
         if ($process) {
-            Stop-Process -Id $id -Force
+            Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
             Write-Host "Stopped AI publisher process PID $id."
         }
     }

@@ -46,15 +46,15 @@ def test_six_perspective_polygons_load():
     assert all(len(polygon) >= 4 for polygon in zones)
 
 
-def test_user_reference_zone_numbering():
+def test_camera_perspective_zone_numbering():
     zones = load_config_zones()
     points = {
-        1: (180, 300),
-        2: (560, 280),
-        3: (1030, 240),
-        4: (220, 620),
-        5: (700, 560),
-        6: (1080, 570),
+        1: (260, 650),   # bottom-left / camera-side
+        2: (900, 560),   # middle-right / lower-mid
+        3: (220, 420),   # left/mid working area
+        4: (1050, 160),  # top-right
+        5: (620, 160),   # upper-middle
+        6: (160, 150),   # top-left
     }
     for expected_zone, point in points.items():
         assert classify(point, zones) == [expected_zone]
@@ -62,8 +62,8 @@ def test_user_reference_zone_numbering():
 
 def test_boundary_margin_uncertainty():
     zones = load_config_zones()
-    assert near_boundary((430, 390), zones)
-    assert not near_boundary((1080, 570), zones)
+    assert near_boundary((430, 470), zones)
+    assert not near_boundary((260, 650), zones)
 
 
 def test_no_accidental_interior_overlaps():

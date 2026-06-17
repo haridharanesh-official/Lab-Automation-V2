@@ -36,9 +36,10 @@ Status labels:
 ## Room mapping
 - [x] Verified `config/zones.json`.
 - [x] Six-zone polygon mapping works with bottom-centre assignment.
-- [x] Applied rough slanted perspective zones from the user-marked back-camera reference.
-- [x] Corrected Zone 1/Zone 2 split so Zone 1 remains bottom-right and Zone 2 owns bottom-middle.
-- [x] Filled the bottom-right empty area into Zone 1 with a clean shared Zone 1/Zone 2 boundary.
+- [x] Recalibrated zones using live camera-image perspective rather than the architectural top-down room diagram.
+- [x] Camera-perspective numbering is now: Zone 1 bottom-left/camera-side, Zone 2 middle-right/lower-mid, Zone 3 left/mid working area, Zone 4 top-right, Zone 5 upper-middle, Zone 6 top-left.
+- [x] Added tests for representative 1280x720 camera-perspective points and out-of-zone assignment.
+- [x] Ran short display-mode live check after camera-perspective update; AI published only `lab/vision/#`, no relay `/set` messages were observed, and final mode was returned to `manual`.
 - [x] Mappings marked provisional until physical tests pass.
 - [ ] Reduce live zone-boundary uncertainty through final supervised calibration.
 

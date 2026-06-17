@@ -370,7 +370,7 @@ def test_bottom_center_point_and_zone_assignment_pipeline():
 
     class Boxes:
         def __init__(self):
-            self.xyxy = FakeTensor([[150, 180, 210, 300], [520, 180, 600, 280], [1000, 180, 1070, 300], [5, 5, 20, 20]])
+            self.xyxy = FakeTensor([[230, 520, 290, 650], [850, 430, 950, 560], [190, 300, 250, 420], [460, 180, 500, 240]])
             self.id = FakeTensor([11, 22, 33, 44])
             self.conf = FakeTensor([0.8, 0.9, 0.85, 0.2])
             self.cls = FakeTensor([0, 0, 0, 0])
@@ -390,16 +390,16 @@ def test_bottom_center_point_and_zone_assignment_pipeline():
 def test_each_zone_has_representative_point_and_out_of_zone_returns_none():
     zones = load_zones(str(ROOT / "config" / "zones.json"))
     points = {
-        1: (180, 300),
-        2: (560, 280),
-        3: (1030, 240),
-        4: (220, 620),
-        5: (700, 560),
-        6: (1080, 570),
+        1: (260, 650),
+        2: (900, 560),
+        3: (220, 420),
+        4: (1050, 160),
+        5: (620, 160),
+        6: (160, 150),
     }
     for expected_zone, point in points.items():
         assert assign_zone(point, zones) == expected_zone
-    assert assign_zone((1270, 30), zones) is None
+    assert assign_zone((480, 240), zones) is None
 
 
 def test_count_window_is_time_bounded_and_current_counts_are_separate():
