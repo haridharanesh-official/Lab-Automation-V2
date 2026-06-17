@@ -59,3 +59,36 @@ Use these companion commands as needed:
 .\status_lab_automation.ps1
 .\stop_lab_automation.ps1
 ```
+
+## Zone and Count Validation Before Auto
+
+Before any physical Auto test, validate the AI display against the live camera:
+
+```powershell
+.\start_lab_automation.ps1 -Display
+```
+
+Confirm the following in the display window:
+- visible people have YOLO boxes
+- each person has a bottom-centre foot point
+- each foot point lands in the correct camera-perspective zone
+- `Current Zone Counts` changes immediately when people are assigned
+- `Stable Zone Counts` and `Published Count` update only according to debounce/window logic
+- no person is silently dropped unless their foot point is truly outside all polygons
+
+The zone map is defined from the camera image, not the architectural room drawing:
+- Zone 1: bottom-left / camera-side
+- Zone 2: middle-right / lower-mid
+- Zone 3: left/mid visible working area
+- Zone 4: top-right
+- Zone 5: upper-middle
+- Zone 6: top-left
+
+Then verify the broker path from `labos`:
+
+```bash
+mosquitto_sub -h localhost -v -F '%I %t %p' -t 'lab/vision/#'
+mosquitto_sub -h localhost -v -F '%I %t %p' -t 'lab/control/+/set'
+```
+
+AI should publish only `lab/vision/#`. Any `lab/control/+/set` from the AI path is a stop condition.

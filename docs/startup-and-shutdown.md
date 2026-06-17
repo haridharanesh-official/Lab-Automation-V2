@@ -148,3 +148,32 @@ Each run gets a timestamped log file. The current wrapper PID and active log pat
 - Keep final safe mode as `manual` unless a supervised validation explicitly requires another mode.
 - The AI publisher code itself rejects unsafe topics outside `lab/vision/#`.
 - Use `.\status_lab_automation.ps1` before assuming the publisher is down; the system may already be running.
+
+## End-to-End Validation Commands
+
+After starting the display publisher, verify the live path from `labos`:
+
+```bash
+mosquitto_sub -h localhost -v -F '%I %t %p' -t 'lab/vision/#'
+mosquitto_sub -h localhost -v -F '%I %t %p' -t 'lab/control/+/set'
+```
+
+Expected result:
+- `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/heartbeat` update while the AI publisher is running.
+- `lab/vision/people_count` carries the debounced/stable count for Home Assistant and Node-RED.
+- `lab/vision/raw_people_count` may fluctuate more quickly and is diagnostics-only.
+- AI publishes 0 messages to `lab/control/+/set`.
+
+To test Monitor mode safely:
+
+```bash
+mosquitto_pub -h localhost -t lab/automation/mode -r -m monitor
+mosquitto_sub -h localhost -v -F '%I %t %p' -t 'lab/automation/#'
+mosquitto_sub -h localhost -v -F '%I %t %p' -t 'lab/control/+/set'
+```
+
+Monitor mode should produce automation diagnostics and intended states, but 0 relay `/set` commands. Return to Manual afterward:
+
+```bash
+mosquitto_pub -h localhost -t lab/automation/mode -r -m manual
+```

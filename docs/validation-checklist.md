@@ -40,6 +40,7 @@ Status labels:
 - [x] Camera-perspective numbering is now: Zone 1 bottom-left/camera-side, Zone 2 middle-right/lower-mid, Zone 3 left/mid working area, Zone 4 top-right, Zone 5 upper-middle, Zone 6 top-left.
 - [x] Added tests for representative 1280x720 camera-perspective points and out-of-zone assignment.
 - [x] Ran short display-mode live check after camera-perspective update; AI published only `lab/vision/#`, no relay `/set` messages were observed, and final mode was returned to `manual`.
+- [x] Ran follow-up AI PC -> `labos` validation after camera-perspective update. `labos` received debounced `lab/vision/people_count` (`stable_count = 4`, `zone_counts = [0,2,2,0,0,0]` in the initial live capture), fresh status/source/heartbeat, and Node-RED accepted the count.
 - [x] Mappings marked provisional until physical tests pass.
 - [ ] Reduce live zone-boundary uncertainty through final supervised calibration.
 
@@ -67,6 +68,8 @@ Status labels:
 - [x] Monitor MQTT test observed zero relay `/set` commands.
 - [x] Verified deployed `labos` Node-RED receives and processes `lab/vision/people_count`.
 - [x] Verified Manual mode emits zero relay `/set` commands during live AI publishing.
+- [x] Verified Monitor mode processes live people count into intended-state diagnostics with zero relay `/set` commands.
+- [x] Performed a short safe Auto logic check: fresh `mode_state = auto` confirmed, people-count path selected, final mode returned to `manual`, and no relay `/set` messages were captured during the short check.
 - [x] Repo flow now models priority order: manual override > timetable fallback > healthy people-count automation.
 - [x] Repo flow now documents manual override clear topic and timetable fallback windows.
 - [x] Verified stale or unhealthy vision no longer forces `mode_state` back to `manual`.
@@ -97,6 +100,7 @@ Status labels:
 - [x] Updated the live `labos` Home Assistant discovery publisher so the mode selector uses `state_topic = lab/automation/mode_state` and options `manual`, `monitor`, `auto`.
 - [x] Confirm stale vision no longer forces Node-RED `mode_state` back to `manual`.
 - [x] Reconfirmed fresh live `mode_state` transitions for `manual`, `monitor`, and `auto` on June 17, 2026.
+- [x] Verified the MQTT topic feeding HA People Count: `lab/vision/people_count`. Direct dashboard/API value read was not completed because unauthenticated HA API access returned `401 Unauthorized`.
 - [ ] Directly click through the Home Assistant UI selector for `manual -> monitor -> auto -> manual`.
 - [ ] Verify health, warning, status, and mismatch sensors.
 

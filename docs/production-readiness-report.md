@@ -103,6 +103,7 @@ Status: Partially verified
 - Empty-lab stability validation with live MQTT enabled ran for about 11 minutes in Monitor mode, kept repeated `stable_count = 0`, produced zero false positives, and emitted zero relay `/set` commands.
 - June 17, 2026 startup/shutdown validation reconfirmed that both headless and display launch modes publish only `lab/vision/#` and emitted zero observed `lab/control/+/set` traffic from the AI publisher.
 - June 17, 2026 live broker captures also reconfirmed fresh `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/people_count` traffic while the AI publisher was running in both headless and display mode.
+- June 17, 2026 end-to-end display validation observed debounced `lab/vision/people_count` on `labos` with `stable_count = 4` and `zone_counts = [0,2,2,0,0,0]` during the initial occupied capture. Later scene/detection changes produced a stable count of 3, which Node-RED processed as target `TWO_THREE`.
 - June 17, 2026 flicker investigation found no active competing publisher on `labos` for `lab/vision/people_count`. Active `labos-automation.service` and `labos-system-health.service` subscribe/observe the topic and do not publish competing counts.
 - The same live check found duplicate AI PC publisher processes after stopping only the PowerShell wrapper left child Python publishers alive. The Windows start/stop/status scripts were hardened to detect and stop matching orphaned `src.main --config config/config.yaml` processes.
 
@@ -146,6 +147,10 @@ Status: Hardware deployment pending
 - June 17, 2026 live simulator validation reconfirmed:
   - `monitor` mode publishes intended diagnostics with zero relay `/set` commands
   - `auto` mode can drive the current mock relay path and then return to `manual`
+- June 17, 2026 live AI PC -> Node-RED validation reconfirmed:
+  - Manual mode processed `lab/vision/people_count` but emitted zero relay `/set` commands
+  - Monitor mode published intended-state diagnostics and emitted zero relay `/set` commands
+  - a short Auto logic check confirmed fresh `mode_state = auto`, `priority_state = PEOPLE_COUNT`, and `intended_state = TWO_THREE`; final mode was returned to `manual`; no relay `/set` messages were captured during that short logic check
 - June 17, 2026 stale-vision retest kept `mode_state = auto`, but the live diagnostics were still noisy because `labos-mock-relay.service` and current manual-override state continued to republish healthy/people-count diagnostics during the window. That fallback path should be retested with cleaner live conditions before Auto is left enabled at the end of a validation run.
 - The active helper services on `labos` are the `labos-*` units plus containerized/process-level Mosquitto, Node-RED, and Home Assistant. Generic unit names such as `mosquitto.service`, `node-red.service`, and `home-assistant.service` are not present on this host.
 
@@ -159,6 +164,7 @@ Status: Hardware deployment pending
 - Live MQTT discovery for that selector now advertises `manual`, `monitor`, and `auto`, and points the selector state to `lab/automation/mode_state`.
 - Home Assistant entity registry on June 17, 2026 confirmed the selector capabilities were updated live to `manual`, `monitor`, and `auto`.
 - During live MQTT validation after the cleanup, `manual`, `monitor`, and `auto` all produced fresh matching `mode_state` updates with no forced return to `manual`.
+- The MQTT topic feeding the Home Assistant People Count entity was verified as `lab/vision/people_count`. Direct dashboard/API value confirmation was not completed in this run because unauthenticated Home Assistant API access returned `401 Unauthorized`.
 - This June 17 run reconfirmed the live mode contract over MQTT, but did not directly drive the Home Assistant web selector UI during the session.
 - Live repo/discovery configuration still matches the intended selector contract: command topic `lab/automation/mode`, state topic `lab/automation/mode_state`, options `manual`, `monitor`, `auto`.
 - Ten relay switches, six zone sensors, warning/status/mismatch entities still require live Home Assistant verification.
@@ -175,10 +181,10 @@ Status: Hardware deployment pending
 - Shared boundary ambiguity is documented.
 - Ten-minute live model validation saw 59.20% zone-boundary uncertainty with the provisional grid.
 - Ten-minute live people-count validation saw 36.32% zone-boundary uncertainty with the provisional grid.
-- Live validation with the corrected slanted zones still needs to be rerun after the interrupted calibration pass.
+- Live display validation after the camera-perspective correction opened the live stream and produced non-zero zone counts. The initial end-to-end capture saw `stable_count = 4` with `zone_counts = [0,2,2,0,0,0]`; later captures processed `stable_count = 3` as the live scene/detections changed.
 - The new calibration remains approximate and must be verified in live occupied scenes before Auto is trusted.
 - The old top-down room diagram must not be used directly for image polygon calibration; all final points must be clicked or verified in the camera frame.
-- Short display-mode validation after this correction opened the live stream and confirmed `lab/vision/#` traffic only with zero observed `lab/control/+/set` messages. The current scene did not match the earlier four-person screenshot; stable count held at 3 while raw diagnostics briefly reached 4, so the four-person zone assignment still needs a matching occupied live scene to verify visually.
+- Short display-mode validation after this correction opened the live stream and confirmed `lab/vision/#` traffic only with zero observed `lab/control/+/set` messages. Four-person and three-person count states were observed during separate moments, but final production calibration still requires an operator to visually confirm people standing/seated/near-boundary in each physical zone.
 - Door, seated people, occlusion, and real boundaries are not physically verified.
 - Do not update final zone configuration until supervised live validation passes.
 

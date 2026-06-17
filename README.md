@@ -66,6 +66,14 @@ The AI publisher **must never** publish relay commands. It is blocked from `lab/
 
 The current polygons are an improved initial calibration only. Do not trust physical Auto mode until live occupied-scene zone assignment is verified with people standing, seated, moving, and near boundaries.
 
+To validate zones safely, run the live display:
+
+```powershell
+.\start_lab_automation.ps1 -Display
+```
+
+The display must show YOLO boxes, bottom-centre foot points, assigned zone labels, current zone counts, stable zone counts, and the debounced published count. If a person is visible but their foot point is marked `OUT`, update the polygon from the camera frame before using Auto.
+
 ## Node-RED Safety Logic
 Node-RED enforces a strict priority order:
 1. **Manual Override**: Highest priority. Overlays manual states over automation.
@@ -154,6 +162,7 @@ June 17, 2026 startup validation notes:
 - Empty-lab stability test: 11 minutes in Monitor mode yielded repeated `stable_count = 0` and no relay changes.
 - June 17 count-path fix: live display now separates current zone counts from stable/window counts, draws bottom-centre assignment points, and publishes debounced `lab/vision/people_count` separately from raw `lab/vision/raw_people_count`.
 - June 17 zone correction: zone polygons were changed to live camera-perspective numbering; the old top-down room diagram is not directly usable for image polygons.
+- June 17 end-to-end validation: display mode opened `rtsp://hari:8554/labcam`; `labos` received fresh `lab/vision/status`, `lab/vision/source_status`, `lab/vision/heartbeat`, and debounced `lab/vision/people_count`; Node-RED processed the count in Manual and Monitor; Monitor emitted 0 relay `/set` commands; a short Auto logic check confirmed `mode_state=auto` and returned to `manual`.
 
 ## Next Validation Step
 1. Occupied-scene Monitor validation when a person is visible.
