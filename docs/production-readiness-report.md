@@ -10,6 +10,32 @@ Date: June 16, 2026
 
 Lab Automation v2.0 must not be described as physically production-ready until live camera, MQTT, ESP32 relay, Node-RED, Home Assistant, zone calibration, supervised Auto mode, and failure tests all pass on real hardware.
 
+## Production Readiness Report
+
+## Status: BLOCKED (Awaiting Live Physical Validation)
+
+The people detection model training pipeline, room-mapping configuration, AI publisher, Node-RED flow, Home Assistant integration, and ESP32 firmware have all passed strict end-to-end mathematical and static validation. However, physical live validation is pending.
+
+**Current Runtime Config:**
+The runtime config remains pointed at the custom `models/backcam_yolov8s_improved_v3_hardfp.pt`.
+
+**Verification Constraints Met:**
+1. Tests pass (41/41 Pytest).
+2. Monitor mode sends zero relay commands (simulated).
+3. AI cannot publish relay/control topics.
+4. ESP32 firmware excludes GPIO 5.
+5. Six-zone mapping mathematically validated.
+6. Node-RED mode safety verified in mock tests.
+7. Manual control remains instant.
+8. Auto logic verified in simulation.
+9. Camera failure preserves current relay state.
+10. No secrets or large generated files committed.
+
+**Pending Validation:**
+- Controlled physical zone walk test (Blocked: needs human in the lab).
+- Home Assistant dashboard visual check (Blocked: 401 Unauthorized / no web UI access).
+- Service health checks on `labos` and `hari` (Blocked: SSH access unavailable).
+
 ## Software Readiness
 
 Status: Software validation complete
