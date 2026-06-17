@@ -135,4 +135,7 @@ Status labels:
 - [x] Applied live-only relay ack monitor parser fix on `labos`; repo does not contain that service source.
 - [x] Ran final deployment gate in `total-count` mode: Monitor passed with `0` relay `/set` commands and Auto reached `mode_state = auto`, `priority_state = PEOPLE_COUNT`, and `FOUR_PLUS`.
 - [ ] Leave Auto enabled as the final deployed mode. Blocked on missing `lab/control/relay4/state` feedback during final Auto capture.
-- [ ] Confirm Fan 3 / relay4 feedback publishes on `lab/control/relay4/state` after a real Home Assistant toggle or Node-RED command.
+- [x] Confirm Fan 3 / relay4 feedback publishes on `lab/control/relay4/state` after a direct supervised command: `relay4/set ON -> relay4/state ON`, `relay4/set OFF -> relay4/state OFF`.
+- [x] Confirm Home Assistant discovery maps Fan 3 to `lab/control/relay4/set` and `lab/control/relay4/state`.
+- [x] Rerun Auto after relay4 feedback was restored; live `stable_count = 2` selected `TWO_THREE`, relay4 remained OFF with feedback present, and final mode returned to Manual.
+- [ ] Rerun a supervised `4+` Auto scene or controlled count where Auto itself commands relay4/Fan 3 ON, then confirm physical Fan 3 behavior.
