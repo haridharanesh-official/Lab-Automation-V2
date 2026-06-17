@@ -74,6 +74,20 @@ To validate zones safely, run the live display:
 
 The display must show YOLO boxes, bottom-centre foot points, assigned zone labels, current zone counts, stable zone counts, and the debounced published count. If a person is visible but their foot point is marked `OUT`, update the polygon from the camera frame before using Auto.
 
+For controlled one-zone-at-a-time validation, use:
+
+```powershell
+.\.venv\Scripts\python.exe ai-pc\tools\live_zone_walk_test.py
+```
+
+In the live window, press `1`-`6` when the supervised test person is standing in that expected zone, press `s` to save a snapshot, and press `q` to quit. Logs and screenshots are saved under `monitor-results\zone-walk\`.
+
+To test a single pixel foot point without opening the camera:
+
+```powershell
+.\.venv\Scripts\python.exe ai-pc\tools\live_zone_walk_test.py --point 320,650
+```
+
 ## Node-RED Safety Logic
 Node-RED enforces a strict priority order:
 1. **Manual Override**: Highest priority. Overlays manual states over automation.
