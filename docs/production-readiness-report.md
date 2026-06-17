@@ -14,7 +14,7 @@ Lab Automation v2.0 must not be described as physically production-ready until l
 
 Status: Software validation complete
 
-- Local tests: 27 passed
+- Local tests: 34 passed
 - Dependencies: no broken requirements
 - AI publisher safety: refuses relay/control/set/command topics
 - Live deployment contract update: AI telemetry now targets `lab/vision/...` topics consumed by the current `labos` Node-RED runtime.
@@ -22,6 +22,9 @@ Status: Software validation complete
 - Relay mapping logic and fan OR rules: validated in tests
 - Two-empty-report shutdown: validated in tests
 - Camera-failure window clearing: validated in tests
+- Live count-path update: display/counting now uses shared bottom-centre zone assignment, exposes current counts separately from rolling stable counts, and publishes debounced `lab/vision/people_count` for HA/Node-RED.
+- Raw count diagnostics: `lab/vision/raw_people_count` is available for troubleshooting but is not the primary HA/automation count topic.
+- Anti-flicker behavior: brief missed detections and camera/AI uncertainty do not immediately publish false zero.
 - GPIO 5 excluded from firmware
 - Relay 1 mapped to GPIO 33 in firmware
 
@@ -90,6 +93,7 @@ Status: Partially verified
 - Safe Monitor-mode publish path updated to `lab/vision/...`
 - Short live AI publish verification to `lab/vision/...`: passed
 - Exact topics observed from AI: `lab/vision/people_count`, `lab/vision/status`, `lab/vision/source_status`, `lab/vision/heartbeat`
+- Updated AI topic contract: `lab/vision/people_count` is debounced/stable for HA and Node-RED, while `lab/vision/raw_people_count` carries faster diagnostic raw detections.
 - Observed `lab/control/+/set` publishes from AI during verification: 0
 - Relay `/set` commands observed during Monitor test: 0
 - AI publishes outside approved vision topics: not observed in tests
@@ -99,6 +103,8 @@ Status: Partially verified
 - Empty-lab stability validation with live MQTT enabled ran for about 11 minutes in Monitor mode, kept repeated `stable_count = 0`, produced zero false positives, and emitted zero relay `/set` commands.
 - June 17, 2026 startup/shutdown validation reconfirmed that both headless and display launch modes publish only `lab/vision/#` and emitted zero observed `lab/control/+/set` traffic from the AI publisher.
 - June 17, 2026 live broker captures also reconfirmed fresh `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/people_count` traffic while the AI publisher was running in both headless and display mode.
+- June 17, 2026 flicker investigation found no active competing publisher on `labos` for `lab/vision/people_count`. Active `labos-automation.service` and `labos-system-health.service` subscribe/observe the topic and do not publish competing counts.
+- The same live check found duplicate AI PC publisher processes after stopping only the PowerShell wrapper left child Python publishers alive. The Windows start/stop/status scripts were hardened to detect and stop matching orphaned `src.main --config config/config.yaml` processes.
 
 ## ESP32 Readiness
 
@@ -163,14 +169,14 @@ Status: Hardware deployment pending
 Status: Hardware deployment pending
 
 - Existing `config/zones.json` now uses rough slanted perspective polygons from the user-marked back-camera reference.
-- Zone numbering matches the reference: bottom row right-to-left is Zones 1, 2, 3; top row right-to-left is Zones 4, 5, 6.
-- Zone 1/Zone 2 split was corrected so Zone 1 remains the bottom-right wedge and Zone 2 owns the bottom-middle table area.
-- The bottom-right empty area was filled into Zone 1 with a clean shared Zone 1/Zone 2 boundary.
+- Zone numbering was updated to the latest physical-layout reference: near the door/top row is Zones 1, 2, 3 left-to-right, and the lower row is Zones 4, 5, 6 left-to-right from the camera view.
+- The previous Zone 1/Zone 2 orientation was not safe for Auto and was replaced with an improved initial 1280x720 calibration.
 - Approximate zone centers and sample foot-points map uniquely in software.
 - Shared boundary ambiguity is documented.
 - Ten-minute live model validation saw 59.20% zone-boundary uncertainty with the provisional grid.
 - Ten-minute live people-count validation saw 36.32% zone-boundary uncertainty with the provisional grid.
 - Live validation with the corrected slanted zones still needs to be rerun after the interrupted calibration pass.
+- The new calibration remains approximate and must be verified in live occupied scenes before Auto is trusted.
 - Door, seated people, occlusion, and real boundaries are not physically verified.
 - Do not update final zone configuration until supervised live validation passes.
 

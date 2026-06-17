@@ -30,6 +30,10 @@ mqtt:
       unique_id: lab_vision_people_count
       state_topic: lab/vision/people_count
       value_template: "{{ value_json.stable_count }}"
+    - name: Lab Raw People Count
+      unique_id: lab_vision_raw_people_count
+      state_topic: lab/vision/raw_people_count
+      value_template: "{{ value_json.raw_total_count }}"
   switch:
     - name: Lab Relay 1
       unique_id: lab_relay_1

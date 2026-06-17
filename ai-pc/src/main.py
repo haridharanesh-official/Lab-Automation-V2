@@ -18,6 +18,42 @@ from .zones import CountWindow
 from .zones import assign_zone
 
 
+class DebouncedPeopleCount:
+    """Keeps HA/automation people count stable through brief missed detections."""
+
+    def __init__(self, stable_seconds: float = 3.0, zero_hold_seconds: float = 10.0) -> None:
+        self.stable_seconds = float(stable_seconds)
+        self.zero_hold_seconds = float(zero_hold_seconds)
+        self.published_zone_counts = [0] * 6
+        self.candidate_zone_counts: list[int] | None = None
+        self.candidate_since: float | None = None
+
+    def update(self, raw_zone_counts: list[int], now: float, source_healthy: bool) -> list[int]:
+        if not source_healthy:
+            self.candidate_zone_counts = None
+            self.candidate_since = None
+            return list(self.published_zone_counts)
+
+        raw_zone_counts = list(raw_zone_counts)
+        if raw_zone_counts == self.published_zone_counts:
+            self.candidate_zone_counts = None
+            self.candidate_since = None
+            return list(self.published_zone_counts)
+
+        if raw_zone_counts != self.candidate_zone_counts:
+            self.candidate_zone_counts = raw_zone_counts
+            self.candidate_since = now
+            return list(self.published_zone_counts)
+
+        hold_seconds = self.zero_hold_seconds if sum(raw_zone_counts) == 0 else self.stable_seconds
+        if self.candidate_since is not None and now - self.candidate_since >= hold_seconds:
+            self.published_zone_counts = raw_zone_counts
+            self.candidate_zone_counts = None
+            self.candidate_since = None
+
+        return list(self.published_zone_counts)
+
+
 def camera_interrupted(window: CountWindow) -> None:
     window.clear()
 
@@ -35,32 +71,76 @@ def load_zones(path: str) -> list[list[tuple[int, int]]]:
     return [[tuple(point) for point in polygon] for polygon in data.get("zones", [])]
 
 
-def counts_from_frame(result, zones: list[list[tuple[int, int]]]) -> list[int]:
+def bottom_center_point(box: list[int]) -> tuple[int, int]:
+    return (int((box[0] + box[2]) // 2), int(box[3]))
+
+
+def frame_assignments(result, zones: list[list[tuple[int, int]]]) -> tuple[list[int], list[dict]]:
     counts = [0] * 6
+    assignments: list[dict] = []
     if result.boxes is None:
-        return counts
-    for raw_box in result.boxes.xyxy.cpu().tolist():
+        return counts, assignments
+    track_ids = result.boxes.id.int().cpu().tolist() if result.boxes.id is not None else []
+    confidences = result.boxes.conf.cpu().tolist() if result.boxes.conf is not None else []
+    classes = result.boxes.cls.int().cpu().tolist() if result.boxes.cls is not None else []
+    for index, raw_box in enumerate(result.boxes.xyxy.cpu().tolist()):
+        if classes and classes[index] != 0:
+            continue
         box = [int(round(value)) for value in raw_box]
-        bottom_center = ((box[0] + box[2]) // 2, box[3])
+        bottom_center = bottom_center_point(box)
         zone = assign_zone(bottom_center, zones)
         if zone is not None and 1 <= zone <= 6:
             counts[zone - 1] += 1
-    return counts
+        assignments.append(
+            {
+                "box": box,
+                "bottom_center": bottom_center,
+                "zone": zone,
+                "confidence": confidences[index] if index < len(confidences) else 0.0,
+                "track_id": track_ids[index] if index < len(track_ids) else None,
+            }
+        )
+    return counts, assignments
 
 
-def publish_status(publisher: VisionPublisher, source_status: str, stable_count: int, zone_counts: list[int],
-                   frame_fps: float, latency_ms: float) -> None:
+def publish_status(
+    publisher: VisionPublisher,
+    source_status: str,
+    stable_count: int,
+    stable_zone_counts: list[int],
+    current_zone_counts: list[int],
+    debounced_zone_counts: list[int],
+    frame_fps: float,
+    latency_ms: float,
+) -> None:
     now_ms = int(time.time() * 1000)
     publisher.publish("lab/vision/status", "online", retain=True)
     publisher.publish("lab/vision/source_status", source_status, retain=True)
+    raw_payload = {
+        "publisher": "labvision-ai-pc",
+        "timestamp": now_ms,
+        "total_count": sum(current_zone_counts),
+        "raw_total_count": sum(current_zone_counts),
+        "raw_zone_counts": current_zone_counts,
+        "source_healthy": source_status == "healthy",
+        "status": "online",
+        "fps": round(frame_fps, 3),
+        "inference_ms": round(latency_ms, 3),
+    }
+    publisher.publish("lab/vision/raw_people_count", raw_payload, retain=False)
     publisher.publish(
         "lab/vision/people_count",
         {
             "publisher": "labvision-ai-pc",
             "timestamp": now_ms,
-            "total_count": sum(zone_counts),
-            "stable_count": stable_count,
-            "zone_counts": zone_counts,
+            "total_count": sum(debounced_zone_counts),
+            "stable_count": sum(debounced_zone_counts),
+            "zone_counts": debounced_zone_counts,
+            "window_stable_count": stable_count,
+            "window_zone_counts": stable_zone_counts,
+            "raw_total_count": sum(current_zone_counts),
+            "raw_zone_counts": current_zone_counts,
+            "debounced": True,
             "source_healthy": source_status == "healthy",
             "status": "online",
             "fps": round(frame_fps, 3),
@@ -82,7 +162,8 @@ def zone_color(index: int) -> tuple[int, int, int]:
     return colors[index % len(colors)]
 
 
-def draw_zone_overlay(frame, zones: list[list[tuple[int, int]]], zone_counts: list[int]) -> None:
+def draw_zone_overlay(frame, zones: list[list[tuple[int, int]]], current_zone_counts: list[int],
+                      stable_zone_counts: list[int]) -> None:
     for index, polygon in enumerate(zones):
         if not polygon:
             continue
@@ -100,32 +181,30 @@ def draw_zone_overlay(frame, zones: list[list[tuple[int, int]]], zone_counts: li
             cx, cy = polygon[0]
         cv2.putText(
             frame,
-            f"Z{index + 1}: {zone_counts[index]}",
-            (cx - 25, cy),
+            f"Z{index + 1} C:{current_zone_counts[index]} S:{stable_zone_counts[index]}",
+            (cx - 60, cy),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
+            0.52,
             (255, 255, 255),
             2,
             cv2.LINE_AA,
         )
 
 
-def draw_detection_overlay(frame, result, zones: list[list[tuple[int, int]]], zone_counts: list[int],
-                           stable_count: int, frame_fps: float, latency_ms: float, source_status: str) -> None:
-    draw_zone_overlay(frame, zones, zone_counts)
-    if result.boxes is not None:
-        track_ids = result.boxes.id.int().cpu().tolist() if result.boxes.id is not None else []
-        confidences = result.boxes.conf.cpu().tolist() if result.boxes.conf is not None else []
-        classes = result.boxes.cls.int().cpu().tolist() if result.boxes.cls is not None else []
-        for index, raw_box in enumerate(result.boxes.xyxy.cpu().tolist()):
-            if classes and classes[index] != 0:
-                continue
-            box = [int(round(value)) for value in raw_box]
-            bottom_center = ((box[0] + box[2]) // 2, box[3])
-            zone = assign_zone(bottom_center, zones)
+def draw_detection_overlay(frame, assignments: list[dict], zones: list[list[tuple[int, int]]],
+                           current_zone_counts: list[int], stable_zone_counts: list[int], stable_count: int,
+                           frame_fps: float, latency_ms: float, source_status: str,
+                           window_samples: int, seconds_until_report: float,
+                           debounced_zone_counts: list[int] | None = None) -> None:
+    draw_zone_overlay(frame, zones, current_zone_counts, stable_zone_counts)
+    if assignments:
+        for assignment in assignments:
+            box = assignment["box"]
+            bottom_center = assignment["bottom_center"]
+            zone = assignment["zone"]
             color = zone_color(zone - 1) if zone is not None and 1 <= zone <= 6 else (255, 255, 255)
-            confidence = confidences[index] if index < len(confidences) else 0.0
-            track_id = track_ids[index] if index < len(track_ids) else None
+            confidence = assignment["confidence"]
+            track_id = assignment["track_id"]
             label = f"person {confidence:.2f}"
             if track_id is not None:
                 label = f"ID {track_id} {confidence:.2f}"
@@ -152,10 +231,26 @@ def draw_detection_overlay(frame, result, zones: list[list[tuple[int, int]]], zo
                     2,
                     cv2.LINE_AA,
                 )
+            else:
+                cv2.drawMarker(frame, bottom_center, (0, 0, 255), cv2.MARKER_TILTED_CROSS, 16, 2, cv2.LINE_AA)
+                cv2.putText(
+                    frame,
+                    "OUT",
+                    (bottom_center[0] + 6, bottom_center[1] - 6),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 0, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
 
     lines = [
+        f"Current Zone Counts: {current_zone_counts}",
+        f"Stable Zone Counts: {stable_zone_counts}",
         f"Stable Count: {stable_count}",
-        f"Zone Counts: {zone_counts}",
+        f"Published Count: {sum(debounced_zone_counts or stable_zone_counts)}",
+        f"Window Samples: {window_samples}",
+        f"Seconds Until Report: {seconds_until_report:.1f}",
         f"FPS: {frame_fps:.2f}",
         f"Inference: {latency_ms:.1f} ms",
         f"Source: {source_status}",
@@ -211,7 +306,11 @@ def main() -> None:
     publisher.publish("lab/vision/heartbeat", json.dumps({"publisher": "labvision-ai-pc", "timestamp": int(time.time())}))
 
     cap = None
-    window = CountWindow()
+    window = CountWindow(window_seconds=float(config.get("report_seconds", 60)))
+    debouncer = DebouncedPeopleCount(
+        stable_seconds=float(config.get("people_count_stable_seconds", 3)),
+        zero_hold_seconds=float(config.get("people_count_zero_hold_seconds", 10)),
+    )
     last_heartbeat = 0.0
     last_publish = 0.0
     started = time.monotonic()
@@ -256,13 +355,23 @@ def main() -> None:
                 verbose=False,
             )[0]
             latency_ms = (time.perf_counter() - tick) * 1000
-            zone_counts = counts_from_frame(result, zones)
-            window.add(zone_counts)
-            stable_zone_counts = window.medians()
+            current_zone_counts, assignments = frame_assignments(result, zones)
+            window.add(current_zone_counts, sample_time=now)
+            stable_zone_counts = window.medians(now)
             stable_count = sum(stable_zone_counts)
+            debounced_zone_counts = debouncer.update(stable_zone_counts, now, source_status == "healthy")
 
             if now - last_publish >= 1.0:
-                publish_status(publisher, source_status, stable_count, stable_zone_counts, frame_fps, latency_ms)
+                publish_status(
+                    publisher,
+                    source_status,
+                    stable_count,
+                    stable_zone_counts,
+                    current_zone_counts,
+                    debounced_zone_counts,
+                    frame_fps,
+                    latency_ms,
+                )
                 last_publish = now
             if now - last_heartbeat >= float(config.get("heartbeat_seconds", 10)):
                 publisher.publish(
@@ -275,13 +384,17 @@ def main() -> None:
                 annotated = frame.copy()
                 draw_detection_overlay(
                     annotated,
-                    result,
+                    assignments,
                     zones,
+                    current_zone_counts,
                     stable_zone_counts,
                     stable_count,
                     frame_fps,
                     latency_ms,
                     source_status,
+                    window.sample_count(),
+                    window.seconds_until_report(now),
+                    debounced_zone_counts,
                 )
                 cv2.imshow("Lab Automation v2.0 Live Publisher", annotated)
                 if cv2.waitKey(1) & 0xFF == ord("q"):

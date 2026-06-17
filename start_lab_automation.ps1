@@ -186,6 +186,15 @@ function Get-ExistingPublisherMetadata {
     }
 }
 
+function Get-AiPublisherProcesses {
+    Get-CimInstance Win32_Process |
+        Where-Object {
+            $_.CommandLine -and
+            $_.CommandLine -like "*-m src.main --config*config/config.yaml*" -and
+            $_.CommandLine -like "*$repoRoot*"
+        }
+}
+
 Write-Section "Repo Root"
 Write-Host $repoRoot
 
@@ -227,6 +236,16 @@ if ($existing) {
     Write-Host "Log: $($existing.LogPath)"
     Write-Host "Display mode: $($existing.Display)"
     exit 0
+}
+
+$orphanPublishers = @(Get-AiPublisherProcesses)
+if ($orphanPublishers.Count -gt 0) {
+    Write-Section "Publisher Status"
+    Write-Warning "Matching AI publisher process(es) are already running without current PID metadata. Run .\stop_lab_automation.ps1 first."
+    foreach ($process in $orphanPublishers) {
+        Write-Host "PID $($process.ProcessId): $($process.CommandLine)"
+    }
+    exit 1
 }
 
 if ($DryRun) {

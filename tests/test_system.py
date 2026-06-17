@@ -25,6 +25,7 @@ from src.automation import (
     is_within_fallback_window,
 )
 from src.main import camera_interrupted
+from src.main import DebouncedPeopleCount, bottom_center_point, frame_assignments, load_zones, publish_status
 from src.mqtt_publisher import VisionPublisher
 from src.reporting import build_report, validate_report
 from src.topics import assert_vision_topic_safe
@@ -36,11 +37,26 @@ def report(seq, zones):
             "sample_count": 10, "window_seconds": 60, "healthy": True}
 
 
+class FakeTensor:
+    def __init__(self, values):
+        self.values = values
+
+    def int(self):
+        return self
+
+    def cpu(self):
+        return self
+
+    def tolist(self):
+        return self.values
+
+
 def test_median_and_polygon_assignment():
     window = CountWindow()
     for sample in ([0, 1, 2, 3, 4, 5], [2, 1, 2, 3, 4, 5], [1, 1, 2, 3, 4, 5]):
-        window.add(sample)
-    assert window.medians() == [1, 1, 2, 3, 4, 5]
+        window.add(sample, sample_time=len(window.samples))
+    assert window.medians(now=2) == [1, 1, 2, 3, 4, 5]
+    assert window.current_counts() == [1, 1, 2, 3, 4, 5]
     assert assign_zone((5, 5), [[(0, 0), (10, 0), (10, 10), (0, 10)]]) == 1
 
 
@@ -133,6 +149,8 @@ def test_home_assistant_mqtt_contract_matches_lab_runtime():
     assert "state_topic: lab/vision/source_status" in mqtt_yaml
     assert "state_topic: lab/automation/priority_state" in mqtt_yaml
     assert "state_topic: lab/vision/people_count" in mqtt_yaml
+    assert "state_topic: lab/vision/raw_people_count" in mqtt_yaml
+    assert "unique_id: lab_vision_raw_people_count" in mqtt_yaml
     assert "command_topic: lab/control/relay1/set" in mqtt_yaml
     assert "state_topic: lab/control/relay10/state" in mqtt_yaml
     assert "labos/v2/" not in mqtt_yaml
@@ -183,6 +201,55 @@ def test_vision_publisher_serializes_live_people_count_payload():
     assert args[0] == "lab/vision/people_count"
     assert json.loads(args[1]) == payload
     assert kwargs["qos"] == 1
+
+
+def test_publish_status_splits_raw_and_debounced_people_count_topics():
+    class FakeClient:
+        def __init__(self):
+            self.calls = []
+
+        def publish(self, *args, **kwargs):
+            self.calls.append((args, kwargs))
+
+    client = FakeClient()
+    publish_status(
+        VisionPublisher(client),
+        "healthy",
+        stable_count=2,
+        stable_zone_counts=[1, 1, 0, 0, 0, 0],
+        current_zone_counts=[2, 0, 0, 0, 0, 0],
+        debounced_zone_counts=[1, 0, 0, 0, 0, 0],
+        frame_fps=24.5,
+        latency_ms=35.2,
+    )
+    by_topic = {args[0]: json.loads(args[1]) if args[0].startswith("lab/vision/") and args[1].startswith("{") else args[1]
+                for args, _kwargs in client.calls}
+    assert by_topic["lab/vision/raw_people_count"]["raw_total_count"] == 2
+    assert by_topic["lab/vision/raw_people_count"]["raw_zone_counts"] == [2, 0, 0, 0, 0, 0]
+    stable_payload = by_topic["lab/vision/people_count"]
+    assert stable_payload["stable_count"] == 1
+    assert stable_payload["zone_counts"] == [1, 0, 0, 0, 0, 0]
+    assert stable_payload["window_stable_count"] == 2
+    assert stable_payload["raw_total_count"] == 2
+
+
+def test_debounced_people_count_prevents_fast_zero_two_flicker():
+    debouncer = DebouncedPeopleCount(stable_seconds=2, zero_hold_seconds=6)
+    assert debouncer.update([0, 0, 0, 0, 0, 0], 0, True) == [0, 0, 0, 0, 0, 0]
+    assert debouncer.update([2, 0, 0, 0, 0, 0], 1, True) == [0, 0, 0, 0, 0, 0]
+    assert debouncer.update([0, 0, 0, 0, 0, 0], 1.5, True) == [0, 0, 0, 0, 0, 0]
+    assert debouncer.update([2, 0, 0, 0, 0, 0], 2, True) == [0, 0, 0, 0, 0, 0]
+    assert debouncer.update([2, 0, 0, 0, 0, 0], 4.1, True) == [2, 0, 0, 0, 0, 0]
+
+
+def test_debounced_people_count_holds_last_good_count_through_misses_and_camera_failure():
+    debouncer = DebouncedPeopleCount(stable_seconds=1, zero_hold_seconds=5)
+    debouncer.update([2, 0, 0, 0, 0, 0], 0, True)
+    assert debouncer.update([2, 0, 0, 0, 0, 0], 1.2, True) == [2, 0, 0, 0, 0, 0]
+    assert debouncer.update([0, 0, 0, 0, 0, 0], 2, True) == [2, 0, 0, 0, 0, 0]
+    assert debouncer.update([0, 0, 0, 0, 0, 0], 6.5, False) == [2, 0, 0, 0, 0, 0]
+    assert debouncer.update([0, 0, 0, 0, 0, 0], 8, True) == [2, 0, 0, 0, 0, 0]
+    assert debouncer.update([0, 0, 0, 0, 0, 0], 13.1, True) == [0, 0, 0, 0, 0, 0]
 
 
 def test_all_requested_monitor_scenarios_send_zero_commands():
@@ -297,6 +364,66 @@ def test_fallback_window_helper():
     assert not is_within_fallback_window(datetime(2026, 6, 16, 12, 45))
 
 
+def test_bottom_center_point_and_zone_assignment_pipeline():
+    zones = load_zones(str(ROOT / "config" / "zones.json"))
+    assert bottom_center_point([100, 200, 140, 360]) == (120, 360)
+
+    class Boxes:
+        def __init__(self):
+            self.xyxy = FakeTensor([[150, 180, 210, 300], [520, 180, 600, 280], [1000, 180, 1070, 300], [5, 5, 20, 20]])
+            self.id = FakeTensor([11, 22, 33, 44])
+            self.conf = FakeTensor([0.8, 0.9, 0.85, 0.2])
+            self.cls = FakeTensor([0, 0, 0, 0])
+
+    class Result:
+        def __init__(self):
+            self.boxes = Boxes()
+
+    counts, assignments = frame_assignments(Result(), zones)
+    assert counts[:3] == [1, 1, 1]
+    assert assignments[0]["zone"] == 1
+    assert assignments[1]["zone"] == 2
+    assert assignments[2]["zone"] == 3
+    assert assignments[3]["zone"] is None
+
+
+def test_each_zone_has_representative_point_and_out_of_zone_returns_none():
+    zones = load_zones(str(ROOT / "config" / "zones.json"))
+    points = {
+        1: (180, 300),
+        2: (560, 280),
+        3: (1030, 240),
+        4: (220, 620),
+        5: (700, 560),
+        6: (1080, 570),
+    }
+    for expected_zone, point in points.items():
+        assert assign_zone(point, zones) == expected_zone
+    assert assign_zone((1270, 30), zones) is None
+
+
+def test_count_window_is_time_bounded_and_current_counts_are_separate():
+    window = CountWindow(window_seconds=60)
+    window.add([1, 0, 0, 0, 0, 0], sample_time=0)
+    window.add([2, 0, 0, 0, 0, 0], sample_time=10)
+    window.add([3, 0, 0, 0, 0, 0], sample_time=20)
+    assert window.current_counts() == [3, 0, 0, 0, 0, 0]
+    assert window.medians(now=20) == [2, 0, 0, 0, 0, 0]
+    window.add([4, 0, 0, 0, 0, 0], sample_time=85)
+    assert window.samples == [[4, 0, 0, 0, 0, 0]]
+    assert window.current_counts() == [4, 0, 0, 0, 0, 0]
+    assert window.medians(now=85) == [4, 0, 0, 0, 0, 0]
+
+
+def test_load_zones_returns_live_frame_coordinate_space():
+    zones = load_zones(str(ROOT / "config" / "zones.json"))
+    assert len(zones) == 6
+    for polygon in zones:
+        for x, y in polygon:
+            assert 0 <= x <= 1280
+            assert 0 <= y <= 720
+
+
 def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     start_script = (ROOT / "start_lab_automation.ps1").read_text()
     stop_script = (ROOT / "stop_lab_automation.ps1").read_text()
@@ -329,7 +456,9 @@ def test_windows_startup_scripts_reference_safe_ai_publisher_contract():
     assert 'parser.add_argument("--display"' in main_py
     assert "cv2.imshow" in main_py
     assert "Stable Count:" in main_py
-    assert "Zone Counts:" in main_py
+    assert "Current Zone Counts:" in main_py
+    assert "Stable Zone Counts:" in main_py
+    assert "Published Count:" in main_py
     assert "Source:" in main_py
 
     assert ".\\start_lab_automation.ps1 -DryRun" in startup_doc

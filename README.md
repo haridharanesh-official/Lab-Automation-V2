@@ -39,7 +39,8 @@ If you are new to the project, start with these guides:
 
 ## MQTT Topic Contract
 The current deployed `labos` runtime uses the `lab/...` namespace. The AI publisher is restricted to the `lab/vision/#` namespace.
-- `lab/vision/people_count`: Published by AI
+- `lab/vision/people_count`: Debounced people-count JSON published by AI for Home Assistant and Node-RED automation
+- `lab/vision/raw_people_count`: Raw current detection JSON published by AI for diagnostics only
 - `lab/vision/status`, `lab/vision/source_status`, `lab/vision/heartbeat`: Telemetry from AI
 - `lab/automation/mode`: Mode selection (`manual`, `monitor`, `auto`)
 - `lab/automation/mode_state`: Confirmed controller mode state for dashboards and validation
@@ -50,7 +51,9 @@ The current deployed `labos` runtime uses the `lab/...` namespace. The AI publis
 The RTSP bridge (`rtsp://hari:8554/labcam`) has been hardened with a dedicated systemd service and a health check timer. It currently runs continuously and provides a 1280x720 H.265 stream for the AI PC.
 
 ## AI Publisher Behavior
-The AI publisher **must never** publish relay commands. It is blocked from `lab/control/#` or any topic ending in `/set`. It publishes vision reports, and in the event of an upstream failure, it clears detection windows and preserves safety.
+The AI publisher **must never** publish relay commands. It is blocked from `lab/control/#` or any topic ending in `/set`. It publishes vision reports only under `lab/vision/#`.
+
+`lab/vision/people_count` is intentionally debounced for HA and Node-RED. Brief missed detections do not immediately publish zero, and the last known good count is preserved during camera/AI uncertainty. `lab/vision/raw_people_count` may move faster and is useful only for diagnostics.
 
 ## Node-RED Safety Logic
 Node-RED enforces a strict priority order:
@@ -103,13 +106,14 @@ Preferred operator wrapper on the Windows AI PC:
 
 What these scripts do:
 - `start_lab_automation.ps1`: verifies the venv, config, zones, model, RTSP stream, MQTT broker, and live retained topics before starting the AI publisher with log capture. Use `-Display` to launch the same publisher with a live OpenCV overlay window.
-- `stop_lab_automation.ps1`: stops only the AI publisher wrapper started by the master startup script.
-- `status_lab_automation.ps1`: shows camera reachability, MQTT reachability, latest `mode_state`, heartbeat age, whether the AI publisher appears to be running, and whether it was started in display mode.
+- `stop_lab_automation.ps1`: stops the AI publisher wrapper and matching Python child/orphan publisher processes from this repo.
+- `status_lab_automation.ps1`: shows camera reachability, MQTT reachability, latest `mode_state`, heartbeat age, whether the AI publisher appears to be running, matching publisher process count, and whether it was started in display mode.
 
 June 17, 2026 startup validation notes:
 - headless startup and shutdown were validated against the live `labos` broker and `hari` RTSP stream
 - display startup was validated against the live broker/stream and now records `display=true` in PID metadata cleanly
 - if an old `logs/ai-publisher/ai-publisher.pid.json` file exists from before display mode was added, the scripts now tolerate the missing `display` property instead of crashing
+- follow-up MQTT debugging found orphaned Python publisher children can create duplicate AI publisher streams if only the wrapper process is stopped; the scripts now detect duplicates and stop matching repo publisher children/orphans
 
 ### 4. Other Existing Operator Scripts
 
@@ -137,6 +141,7 @@ June 17, 2026 startup validation notes:
 - Camera bridge hardened after upstream connectivity issues.
 - Deployed Node-RED flow correctly processes `lab/vision/people_count`.
 - Empty-lab stability test: 11 minutes in Monitor mode yielded repeated `stable_count = 0` and no relay changes.
+- June 17 count-path fix: live display now separates current zone counts from stable/window counts, draws bottom-centre assignment points, and publishes debounced `lab/vision/people_count` separately from raw `lab/vision/raw_people_count`.
 
 ## Next Validation Step
 1. Occupied-scene Monitor validation when a person is visible.

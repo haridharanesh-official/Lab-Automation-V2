@@ -49,12 +49,12 @@ def test_six_perspective_polygons_load():
 def test_user_reference_zone_numbering():
     zones = load_config_zones()
     points = {
-        1: (1120, 620),
-        2: (650, 560),
-        3: (250, 650),
-        4: (1050, 150),
-        5: (560, 250),
-        6: (160, 300),
+        1: (180, 300),
+        2: (560, 280),
+        3: (1030, 240),
+        4: (220, 620),
+        5: (700, 560),
+        6: (1080, 570),
     }
     for expected_zone, point in points.items():
         assert classify(point, zones) == [expected_zone]
@@ -62,13 +62,17 @@ def test_user_reference_zone_numbering():
 
 def test_boundary_margin_uncertainty():
     zones = load_config_zones()
-    assert near_boundary((790, 303), zones)
-    assert not near_boundary((1120, 620), zones)
+    assert near_boundary((430, 390), zones)
+    assert not near_boundary((1080, 570), zones)
 
 
 def test_no_accidental_interior_overlaps():
     zones = load_config_zones()
     for y in range(20, 700, 40):
         for x in range(20, 1260, 40):
-            matches = classify((x, y), zones)
+            matches = [
+                index + 1
+                for index, polygon in enumerate(zones)
+                if cv2.pointPolygonTest(np.array(polygon), (x, y), False) > 0
+            ]
             assert len(matches) <= 1

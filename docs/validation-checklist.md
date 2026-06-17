@@ -51,6 +51,10 @@ Status labels:
 - [x] Verified `start_lab_automation.ps1 -Display` live startup/shutdown path against the real broker and RTSP stream.
 - [x] Fixed startup PID metadata parsing so older runs without a `display` field no longer crash display mode.
 - [x] Retargeted AI PC live publisher defaults to `lab/vision/people_count`, `lab/vision/status`, `lab/vision/source_status`, and `lab/vision/heartbeat`.
+- [x] Split raw detection diagnostics to `lab/vision/raw_people_count` while keeping `lab/vision/people_count` debounced for HA and Node-RED.
+- [x] Added anti-flicker logic so brief missed detections and camera uncertainty do not immediately publish false zero.
+- [x] Updated live display overlay to show current zone counts, stable zone counts, published count, window sample count, seconds until report, foot-point markers, assigned zones, and OUT markers.
+- [x] Inspected `labos` for competing `lab/vision/people_count` publishers; active legacy bridge and health monitor were subscribers/observers, not competing publishers.
 - [x] Confirmed AI publisher still refuses `lab/control/#`, relay, `/set`, and `/command` topics.
 - [x] Camera retry Monitor validation imported no MQTT client and published zero reports or relay `/set` commands.
 - [x] Ten-minute live model validation used MQTT disabled and published zero relay `/set` commands.

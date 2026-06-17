@@ -71,8 +71,11 @@ In display mode the publisher opens a live OpenCV window that shows:
 - track IDs when available from the tracker
 - zone polygons
 - bottom-centre assignment point for each detected person
-- per-zone counts
-- total stable count
+- assigned zone label or `OUT` marker for each person foot point
+- current per-zone counts
+- rolling stable/window zone counts
+- debounced published people count
+- window sample count and seconds until report
 - FPS
 - inference latency
 - source health
@@ -98,6 +101,7 @@ This reports:
 - latest retained `lab/automation/mode_state` if available
 - latest retained vision heartbeat age if available
 - whether the AI publisher process appears to be running
+- how many matching `src.main --config config/config.yaml` publisher processes are present
 - whether the current publisher was started in display mode
 - current wrapper PID and log path if running
 
@@ -107,7 +111,10 @@ This reports:
 .\stop_lab_automation.ps1
 ```
 
-This stops only the wrapper process recorded by `start_lab_automation.ps1`.
+This stops only the AI publisher path started from this repo. It stops:
+- the wrapper process recorded by `start_lab_automation.ps1`
+- child Python publisher processes spawned by that wrapper
+- matching orphaned `src.main --config config/config.yaml` publisher processes from this repo if the PID file is stale or missing
 
 The stop script refuses to kill unrelated processes if the PID file points at something that does not look like the AI publisher wrapper.
 
@@ -120,6 +127,7 @@ Live startup/shutdown validation on the Windows AI PC confirmed:
 - `.\start_lab_automation.ps1 -Display` starts the same publisher in display mode and records `display=true` in PID metadata
 - `.\status_lab_automation.ps1` reports the running PID, log path, and display flag
 - `.\stop_lab_automation.ps1` stops either headless or display mode cleanly
+- Follow-up live debugging found that stopping only the wrapper could leave Python child publishers alive, causing duplicate `lab/vision/people_count` streams. The scripts now detect matching publisher processes before start, report the matching process count in status, and stop matching orphaned child publishers.
 
 Root cause of the reported display bug:
 - older PID metadata files did not contain the `display` field

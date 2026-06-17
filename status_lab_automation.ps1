@@ -11,6 +11,15 @@ $pythonPath = Join-Path $repoRoot ".venv\Scripts\python.exe"
 $configPath = Join-Path $repoRoot "config\config.yaml"
 $pidFile = Join-Path $repoRoot "logs\ai-publisher\ai-publisher.pid.json"
 
+function Get-AiPublisherProcesses {
+    Get-CimInstance Win32_Process |
+        Where-Object {
+            $_.CommandLine -and
+            $_.CommandLine -like "*-m src.main --config*config/config.yaml*" -and
+            $_.CommandLine -like "*$repoRoot*"
+        }
+}
+
 function Test-TcpEndpoint([string]$HostName, [int]$Port, [int]$TimeoutMs = 3000) {
     $timeoutSeconds = [math]::Ceiling($TimeoutMs / 1000.0)
     $script = "import socket,sys; socket.create_connection((r'$HostName',$Port), timeout=$timeoutSeconds).close(); print('OK')"
@@ -104,6 +113,7 @@ $publisherRunning = $false
 $publisherPid = $null
 $logPath = $null
 $displayMode = $null
+$publisherProcesses = @(Get-AiPublisherProcesses)
 if (Test-Path -LiteralPath $pidFile -PathType Leaf) {
     $metadata = Get-Content -LiteralPath $pidFile -Raw | ConvertFrom-Json
     if ($metadata.pid) {
@@ -127,8 +137,10 @@ if (Test-Path -LiteralPath $pidFile -PathType Leaf) {
     mqtt_reachable = $mqttReachable
     latest_mode_state = if ($snapshot) { $snapshot.mode_state } else { $null }
     latest_vision_heartbeat_age_seconds = if ($snapshot) { $snapshot.heartbeat_age_seconds } else { $null }
-    ai_publisher_running = $publisherRunning
+    ai_publisher_running = $publisherRunning -or $publisherProcesses.Count -gt 0
     ai_publisher_pid = $publisherPid
+    ai_publisher_matching_process_count = $publisherProcesses.Count
+    ai_publisher_matching_process_ids = ($publisherProcesses | ForEach-Object { $_.ProcessId }) -join ","
     ai_publisher_log = $logPath
     ai_publisher_display = $displayMode
 } | Format-List
