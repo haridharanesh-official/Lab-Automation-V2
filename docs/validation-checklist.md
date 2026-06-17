@@ -138,4 +138,7 @@ Status labels:
 - [x] Confirm Fan 3 / relay4 feedback publishes on `lab/control/relay4/state` after a direct supervised command: `relay4/set ON -> relay4/state ON`, `relay4/set OFF -> relay4/state OFF`.
 - [x] Confirm Home Assistant discovery maps Fan 3 to `lab/control/relay4/set` and `lab/control/relay4/state`.
 - [x] Rerun Auto after relay4 feedback was restored; live `stable_count = 2` selected `TWO_THREE`, relay4 remained OFF with feedback present, and final mode returned to Manual.
-- [ ] Rerun a supervised `4+` Auto scene or controlled count where Auto itself commands relay4/Fan 3 ON, then confirm physical Fan 3 behavior.
+- [x] Fix stale retained warning behavior so healthy vision publishes retained `lab/automation/warning = none`.
+- [x] Rerun a supervised `4+` Auto scene where Auto itself commands relay4/Fan 3 ON: observed `lab/control/relay4/set ON` followed by `lab/control/relay4/state ON`.
+- [x] Leave Auto enabled after final supervised gate passed.
+- [ ] Continue longer supervised observation for empty-delay OFF, camera/AI failure fallback, MQTT interruption, ESP32 restart, and no-flicker behavior.

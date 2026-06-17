@@ -224,7 +224,7 @@ Status: Hardware deployment pending
 
 ## Physical Auto-Mode Readiness
 
-Status: People-count Auto logic validated; relay4 feedback path verified; staged final deployment still pending
+Status: People-count Auto deployed under supervision; zone-count calibration still pending
 
 - A short supervised Auto-mode entry/exit safety check was completed against the deployed `labos` flow.
 - Earlier confusion about `mode_state` was resolved: fresh `lab/automation/mode_state = auto` does publish when captured correctly.
@@ -264,6 +264,17 @@ Status: People-count Auto logic validated; relay4 feedback path verified; staged
   - direct supervised command `lab/control/relay4/set OFF` produced `lab/control/relay4/state OFF`
   - Auto rerun occurred while live `stable_count = 2`, so the `TWO_THREE` rule correctly kept relay4/Fan 3 OFF and published/retained `lab/control/relay4/state OFF`
   - final mode remained `manual`
+- Final clear-and-deploy pass:
+  - stale retained warning fixed in Node-RED; healthy vision now retains `lab/automation/warning = none`
+  - live warning confirmation: `lab/automation/warning none`
+  - live AI payload: `counting_mode = total-count`, `zone_counts = null`, `stable_count = 4`
+  - Monitor mode: `mode_state = monitor`, `intended_state = FOUR_PLUS`, relay `/set` count `0` over 30 seconds
+  - relay4/Fan 3 was forced OFF in Manual and manual overrides were cleared before Auto
+  - Auto mode: `mode_state = auto`, `priority_state = PEOPLE_COUNT`, `intended_state = FOUR_PLUS`
+  - relay command observed: `lab/control/relay4/set ON`
+  - relay feedback observed: `lab/control/relay4/state ON`
+  - no repeated identical command spam observed during the Auto capture
+  - final mode left as `auto` under supervision
 
 ## Failure-Test Readiness
 
@@ -280,7 +291,7 @@ Status: Hardware deployment pending
 - Reduce or eliminate upstream HEVC reference-frame decode warnings if they affect downstream analytics.
 - Verify ESP32 firmware on real hardware.
 - Verify Home Assistant entities.
-- Rerun a supervised `4+` Auto scene or controlled count where Auto itself commands relay4/Fan 3 ON, then confirm physical Fan 3 behavior.
+- Continue supervised observation for empty-delay OFF, camera/AI failure fallback, MQTT interruption, ESP32 restart, and long-run no-flicker behavior.
 - Complete supervised manual relay mapping.
 - Complete live zone calibration.
 - Complete longer supervised Auto-mode transition and failure tests.

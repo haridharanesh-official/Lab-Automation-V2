@@ -47,7 +47,11 @@
     "inputs": 0,
     "x": 150,
     "y": 80,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "in_status_priority",
@@ -64,7 +68,11 @@
     "inputs": 0,
     "x": 150,
     "y": 120,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "in_source_priority",
@@ -81,7 +89,11 @@
     "inputs": 0,
     "x": 150,
     "y": 160,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "in_heartbeat_priority",
@@ -98,7 +110,11 @@
     "inputs": 0,
     "x": 140,
     "y": 200,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "in_mode_priority",
@@ -115,7 +131,11 @@
     "inputs": 0,
     "x": 150,
     "y": 240,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "in_override_clear_priority",
@@ -132,7 +152,11 @@
     "inputs": 0,
     "x": 170,
     "y": 280,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "in_controller_status_priority",
@@ -149,7 +173,11 @@
     "inputs": 0,
     "x": 160,
     "y": 320,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "in_relay_state_priority",
@@ -166,14 +194,26 @@
     "inputs": 0,
     "x": 160,
     "y": 360,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "tick_priority",
     "type": "inject",
     "z": "tab_lab_priority",
     "name": "Safety Tick 10s",
-    "props": [{"p": "payload"}, {"p": "topic", "vt": "str"}],
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
     "repeat": "10",
     "crontab": "",
     "once": true,
@@ -183,14 +223,22 @@
     "payloadType": "str",
     "x": 140,
     "y": 400,
-    "wires": [["fn_priority_controller"]]
+    "wires": [
+      [
+        "fn_priority_controller"
+      ]
+    ]
   },
   {
     "id": "default_manual_priority",
     "type": "inject",
     "z": "tab_lab_priority",
     "name": "Default Manual On Deploy",
-    "props": [{"p": "payload"}],
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
     "repeat": "",
     "crontab": "",
     "once": true,
@@ -200,7 +248,11 @@
     "payloadType": "str",
     "x": 160,
     "y": 460,
-    "wires": [["mode_out_priority"]]
+    "wires": [
+      [
+        "mode_out_priority"
+      ]
+    ]
   },
   {
     "id": "mode_out_priority",
@@ -225,7 +277,7 @@
     "type": "function",
     "z": "tab_lab_priority",
     "name": "Priority Safety Controller",
-    "func": "const STABLE_READINGS = 3;\nconst FRESH_MS = 15000;\nconst ZERO_OFF_MS = 300000;\nconst MIN_CHANGE_MS = 8000;\nconst OUTSIDE_WINDOW_OFF_MS = 300000;\nconst AUTOMATION_COUNT_SOURCE = 'total-count';\nconst CONTROLLED = [2,3,4,6,7,8];\nconst TOPICS = {2:'lab/control/relay2/set',3:'lab/control/relay3/set',4:'lab/control/relay4/set',6:'lab/control/relay6/set',7:'lab/control/relay7/set',8:'lab/control/relay8/set'};\nfunction m(topic,payload,retain=false){return {topic,payload:typeof payload==='string'?payload:JSON.stringify(payload),retain};}\nfunction send(commands,diagnostics){node.send([commands.length?commands:null,diagnostics.length?diagnostics:null]);}\nfunction nowMinutes(ts){const d=new Date(ts);return d.getHours()*60+d.getMinutes();}\nfunction withinFallbackWindow(ts){const mns=nowMinutes(ts);const morning=(8*60+30)<=mns&&mns<(12*60+30);const afternoon=(13*60)<=mns&&mns<(16*60+30);return morning||afternoon;}\nfunction desired(stage){const s={2:'OFF',3:'OFF',4:'OFF',6:'OFF',7:'OFF',8:'OFF'};if(stage==='ONE'){s[2]='ON';s[7]='ON';}else if(stage==='TWO_THREE'){s[2]='ON';s[3]='ON';s[6]='ON';s[7]='ON';}else if(stage==='FOUR_PLUS'){for(const relay of Object.keys(s))s[relay]='ON';}return s;}\nfunction stageFor(count){return count<=0?'EMPTY':count===1?'ONE':count<4?'TWO_THREE':'FOUR_PLUS';}\nfunction healthy(now){const lastHeartbeat=context.get('lastHeartbeat')||0;const lastCount=context.get('lastCountTs')||0;return context.get('serviceOnline')===true&&context.get('sourceHealthy')===true&&lastHeartbeat>0&&lastCount>0&&(now-lastHeartbeat)<=FRESH_MS&&(now-lastCount)<=FRESH_MS;}\nfunction actual(){return context.get('actual')||{};}\nfunction lastCommand(){return context.get('lastCommand')||{};}\nfunction manualOverrides(){return context.get('manualOverrides')||{};}\nfunction hasManualOverrides(){return Object.keys(manualOverrides()).length > 0;}\nfunction setManualOverride(relay,state){const overrides=manualOverrides();overrides[String(relay)]=state;context.set('manualOverrides',overrides);}\nfunction clearManualOverride(payload){if(payload===undefined||payload===null||String(payload).toLowerCase()==='all'){context.set('manualOverrides',{});return 'cleared all manual overrides';}const overrides=manualOverrides();if(Array.isArray(payload)){for(const relay of payload)delete overrides[String(relay)];}else{delete overrides[String(payload)];}context.set('manualOverrides',overrides);return 'cleared requested manual override(s)';}\nfunction applyOverrides(wanted){const merged=Object.assign({},wanted);for(const [relay,state] of Object.entries(manualOverrides())){merged[relay]=state;}return merged;}\nfunction commandsFor(wanted){const a=actual(),last=lastCommand(),commands=[];for(const [relay,state] of Object.entries(wanted)){if(a[relay]!==state&&last[relay]!==state){commands.push(m(TOPICS[relay],state,false));last[relay]=state;}}context.set('lastCommand',last);return commands;}\nfunction publishState(diags){diags.push(m('lab/automation/status','online',true));diags.push(m('lab/automation/mode_state',context.get('mode')||'manual',true));diags.push(m('lab/automation/count_source',AUTOMATION_COUNT_SOURCE,true));diags.push(m('lab/automation/manual_override_state',manualOverrides(),true));diags.push(m('lab/automation/vision_health',healthy(now)?'healthy':'stale',true));const lastCount=context.get('lastCountTs')||0;diags.push(m('lab/automation/vision_age_seconds',lastCount?Math.floor((now-lastCount)/1000):-1,true));}\nfunction fallbackTarget(now){const lastKnown=context.get('lastKnownAutomation')||desired('FOUR_PLUS');if(withinFallbackWindow(now)){context.set('fallbackOffSince',0);return {decisionSource:'TIMETABLE_FALLBACK',stage:'TIMETABLE_FALLBACK',wanted:applyOverrides(lastKnown),reason:'vision unhealthy -> timetable fallback'};}let offSince=context.get('fallbackOffSince')||0;if(!offSince){offSince=now;context.set('fallbackOffSince',offSince);}if((now-offSince)<OUTSIDE_WINDOW_OFF_MS){return {decisionSource:'TIMETABLE_HOLD',stage:'TIMETABLE_HOLD',wanted:applyOverrides(lastKnown),reason:'vision unhealthy -> preserving last known state outside timetable'};}return {decisionSource:'VISION_STALE',stage:'TIMETABLE_OFF',wanted:applyOverrides(desired('EMPTY')),reason:'vision unhealthy -> safe delayed off outside timetable'};}\nfunction rememberAutomation(stage,wanted,now){context.set('activeStage',stage);context.set('lastApply',now);context.set('pendingStage','');context.set('pendingReads',0);context.set('lastKnownAutomation',Object.assign({},wanted));}\nfunction automationTarget(count,now){const stage=stageFor(count);if(count===0){let zeroSince=context.get('zeroSince')||0;if(!zeroSince){zeroSince=now;context.set('zeroSince',zeroSince);}if((now-zeroSince)<ZERO_OFF_MS){return {decisionSource:'PEOPLE_COUNT',stage:'ZERO_HOLD',wanted:applyOverrides(context.get('lastKnownAutomation')||desired(context.get('activeStage')||'EMPTY')),reason:'healthy zero hold'};}}else{context.set('zeroSince',0);}if(stage===context.get('activeStage')){return {decisionSource:'PEOPLE_COUNT',stage,wanted:applyOverrides(context.get('lastKnownAutomation')||desired(stage)),reason:'stage unchanged'};}let pending=context.get('pendingStage')||'';let reads=context.get('pendingReads')||0;if(stage===pending)reads++;else{pending=stage;reads=1;}context.set('pendingStage',pending);context.set('pendingReads',reads);if(reads<STABLE_READINGS||now-(context.get('lastApply')||0)<MIN_CHANGE_MS){return {decisionSource:'PEOPLE_COUNT',stage:'STABILIZING',wanted:applyOverrides(context.get('lastKnownAutomation')||desired(context.get('activeStage')||'EMPTY')),reason:`stabilizing ${stage}`};}const base=desired(stage);rememberAutomation(stage,base,now);return {decisionSource:'PEOPLE_COUNT',stage,wanted:applyOverrides(base),reason:`applied ${stage}`};}\nconst topic=String(msg.topic||'');\nconst now=Date.now();\nconst mode=context.get('mode')||'manual';\nlet diagnostics=[];\nif(topic==='lab/automation/mode'){\n  const next=String(msg.payload).trim().toLowerCase();\n  const value=['manual','monitor','auto'].includes(next)?next:'manual';\n  context.set('mode',value);\n  if(value!=='auto'){context.set('zeroSince',0);context.set('fallbackOffSince',0);}\n  diagnostics.push(m('lab/automation/status','online',true));\n  diagnostics.push(m('lab/automation/mode_state',value,true));\n  diagnostics.push(m('lab/automation/count_source',AUTOMATION_COUNT_SOURCE,true));\n  diagnostics.push(m('lab/automation/last_action',`mode set to ${value}`,true));\n  diagnostics.push(m('lab/automation/priority_state', value==='manual' ? (hasManualOverrides() ? 'MANUAL_OVERRIDE' : 'MANUAL') : value==='monitor' ? 'MONITOR' : 'VISION_STALE', true));\n  send([],diagnostics);\n  return null;\n}\nif(topic==='lab/automation/manual_override/clear'){\n  diagnostics.push(m('lab/automation/last_action',clearManualOverride(msg.payload),true));\n  diagnostics.push(m('lab/automation/manual_override_state',manualOverrides(),true));\n  diagnostics.push(m('lab/automation/priority_state', (context.get('mode')||'manual')==='manual' ? 'MANUAL' : ((context.get('mode')||'manual')==='monitor' ? 'MONITOR' : (healthy(now) ? 'PEOPLE_COUNT' : 'VISION_STALE')), true));\n  send([],diagnostics);\n  return null;\n}\nif(topic==='lab/vision/status'){\n  let value=String(msg.payload).toLowerCase();\n  try{const parsed=typeof msg.payload==='object'?msg.payload:JSON.parse(String(msg.payload));value=String(parsed.status||value).toLowerCase();}catch(e){}\n  context.set('serviceOnline',value==='online'||value==='healthy');\n  return null;\n}\nif(topic==='lab/vision/source_status'){\n  context.set('sourceHealthy',String(msg.payload).toLowerCase()==='healthy');\n  return null;\n}\nif(topic==='lab/vision/heartbeat'){\n  context.set('lastHeartbeat',now);\n  return null;\n}\nif(topic==='lab/control/status'){\n  context.set('relayOnline',String(msg.payload).toLowerCase()==='online');\n  return null;\n}\nconst stateMatch=topic.match(/^lab\\/control\\/relay(\\d+)\\/state$/);\nif(stateMatch){\n  const relay=stateMatch[1];\n  const state=String(msg.payload).toUpperCase();\n  const a=actual();\n  a[relay]=state;\n  context.set('actual',a);\n  const last=lastCommand();\n  if((context.get('mode')||'manual')==='manual' || (last[relay] && last[relay]!==state)){\n    setManualOverride(relay,state);\n  }\n  return null;\n}\nif(topic==='lab/automation/internal/tick'){\n  publishState(diagnostics);\n  if((context.get('mode')||'manual')==='manual'){\n    diagnostics.push(m('lab/automation/priority_state', hasManualOverrides() ? 'MANUAL_OVERRIDE' : 'MANUAL', true));\n    send([],diagnostics);\n    return null;\n  }\n  if((context.get('mode')||'manual')==='monitor'){\n    diagnostics.push(m('lab/automation/priority_state', healthy(now) ? 'PEOPLE_COUNT' : 'VISION_STALE', true));\n  }\n  if(!healthy(now)){\n    const fb=fallbackTarget(now);\n    diagnostics.push(m('lab/automation/priority_state',fb.decisionSource,true));\n    diagnostics.push(m('lab/automation/warning',fb.reason,false));\n    if((context.get('mode')||'manual')==='auto'){\n      const commands=commandsFor(fb.wanted);\n      send(commands,diagnostics);\n      return null;\n    }\n    send([],diagnostics);\n    return null;\n  }\n  send([],diagnostics);\n  return null;\n}\nif(topic!=='lab/vision/people_count') return null;\nlet payload=msg.payload;\nif(Buffer.isBuffer(payload))payload=payload.toString();\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){diagnostics.push(m('lab/automation/warning','invalid people_count payload ignored',false));send([],diagnostics);return null;}}\nlet ts=Number(payload&&payload.timestamp||0); if(ts<100000000000) ts*=1000;\nconst count=Number(payload&&payload.stable_count);\nconst valid=payload&&payload.source_healthy===true&&payload.status==='online'&&Number.isInteger(count)&&count>=0&&Math.abs(now-ts)<=FRESH_MS;\nif(valid){context.set('latestCount',count);context.set('lastCountTs',now);context.set('serviceOnline',true);context.set('sourceHealthy',true);}publishState(diagnostics);\nif(!valid){const fb=fallbackTarget(now);diagnostics.push(m('lab/automation/warning',fb.reason,false));diagnostics.push(m('lab/automation/priority_state',fb.decisionSource,true));const commands=((context.get('mode')||'manual')==='auto')?commandsFor(fb.wanted):[];send(commands,diagnostics);return null;}\ndiagnostics.push(m('lab/automation/accepted_count',{publisher:'nodered-lab-priority',count,target:stageFor(count),count_source:AUTOMATION_COUNT_SOURCE,timestamp:Math.floor(now/1000)},false));\nif((context.get('mode')||'manual')==='manual'){\n  diagnostics.push(m('lab/automation/priority_state',hasManualOverrides() ? 'MANUAL_OVERRIDE' : 'MANUAL',true));\n  send([],diagnostics);\n  return null;\n}\nconst target=healthy(now)?automationTarget(count,now):fallbackTarget(now);\ndiagnostics.push(m('lab/automation/priority_state',target.decisionSource,true));\ndiagnostics.push(m('lab/automation/intended_state',{publisher:'nodered-lab-priority',stage:target.stage,count,relays:target.wanted,reason:target.reason,decision_source:target.decisionSource,count_source:AUTOMATION_COUNT_SOURCE,timestamp:Math.floor(now/1000)},true));\nif((context.get('mode')||'manual')==='monitor'){\n  send([],diagnostics);\n  return null;\n}\nconst commands=(target.stage==='STABILIZING')?[]:commandsFor(target.wanted);\nsend(commands,diagnostics);\nreturn null;",
+    "func": "const STABLE_READINGS = 3;\nconst FRESH_MS = 15000;\nconst ZERO_OFF_MS = 300000;\nconst MIN_CHANGE_MS = 8000;\nconst OUTSIDE_WINDOW_OFF_MS = 300000;\nconst AUTOMATION_COUNT_SOURCE = 'total-count';\nconst CONTROLLED = [2,3,4,6,7,8];\nconst TOPICS = {2:'lab/control/relay2/set',3:'lab/control/relay3/set',4:'lab/control/relay4/set',6:'lab/control/relay6/set',7:'lab/control/relay7/set',8:'lab/control/relay8/set'};\nfunction m(topic,payload,retain=false){return {topic,payload:typeof payload==='string'?payload:JSON.stringify(payload),retain};}\nfunction send(commands,diagnostics){node.send([commands.length?commands:null,diagnostics.length?diagnostics:null]);}\nfunction nowMinutes(ts){const d=new Date(ts);return d.getHours()*60+d.getMinutes();}\nfunction withinFallbackWindow(ts){const mns=nowMinutes(ts);const morning=(8*60+30)<=mns&&mns<(12*60+30);const afternoon=(13*60)<=mns&&mns<(16*60+30);return morning||afternoon;}\nfunction desired(stage){const s={2:'OFF',3:'OFF',4:'OFF',6:'OFF',7:'OFF',8:'OFF'};if(stage==='ONE'){s[2]='ON';s[7]='ON';}else if(stage==='TWO_THREE'){s[2]='ON';s[3]='ON';s[6]='ON';s[7]='ON';}else if(stage==='FOUR_PLUS'){for(const relay of Object.keys(s))s[relay]='ON';}return s;}\nfunction stageFor(count){return count<=0?'EMPTY':count===1?'ONE':count<4?'TWO_THREE':'FOUR_PLUS';}\nfunction healthy(now){const lastHeartbeat=context.get('lastHeartbeat')||0;const lastCount=context.get('lastCountTs')||0;return context.get('serviceOnline')===true&&context.get('sourceHealthy')===true&&lastHeartbeat>0&&lastCount>0&&(now-lastHeartbeat)<=FRESH_MS&&(now-lastCount)<=FRESH_MS;}\nfunction actual(){return context.get('actual')||{};}\nfunction lastCommand(){return context.get('lastCommand')||{};}\nfunction manualOverrides(){return context.get('manualOverrides')||{};}\nfunction hasManualOverrides(){return Object.keys(manualOverrides()).length > 0;}\nfunction setManualOverride(relay,state){const overrides=manualOverrides();overrides[String(relay)]=state;context.set('manualOverrides',overrides);}\nfunction clearManualOverride(payload){if(payload===undefined||payload===null||String(payload).toLowerCase()==='all'){context.set('manualOverrides',{});return 'cleared all manual overrides';}const overrides=manualOverrides();if(Array.isArray(payload)){for(const relay of payload)delete overrides[String(relay)];}else{delete overrides[String(payload)];}context.set('manualOverrides',overrides);return 'cleared requested manual override(s)';}\nfunction applyOverrides(wanted){const merged=Object.assign({},wanted);for(const [relay,state] of Object.entries(manualOverrides())){merged[relay]=state;}return merged;}\nfunction commandsFor(wanted){const a=actual(),last=lastCommand(),commands=[];for(const [relay,state] of Object.entries(wanted)){if(a[relay]!==state&&last[relay]!==state){commands.push(m(TOPICS[relay],state,false));last[relay]=state;}}context.set('lastCommand',last);return commands;}\nfunction publishState(diags){diags.push(m('lab/automation/status','online',true));diags.push(m('lab/automation/mode_state',context.get('mode')||'manual',true));diags.push(m('lab/automation/count_source',AUTOMATION_COUNT_SOURCE,true));diags.push(m('lab/automation/manual_override_state',manualOverrides(),true));const isHealthy=healthy(now);diags.push(m('lab/automation/vision_health',isHealthy?'healthy':'stale',true));diags.push(m('lab/automation/warning',isHealthy?'none':'vision unhealthy -> timetable fallback',true));const lastCount=context.get('lastCountTs')||0;diags.push(m('lab/automation/vision_age_seconds',lastCount?Math.floor((now-lastCount)/1000):-1,true));}\nfunction fallbackTarget(now){const lastKnown=context.get('lastKnownAutomation')||desired('FOUR_PLUS');if(withinFallbackWindow(now)){context.set('fallbackOffSince',0);return {decisionSource:'TIMETABLE_FALLBACK',stage:'TIMETABLE_FALLBACK',wanted:applyOverrides(lastKnown),reason:'vision unhealthy -> timetable fallback'};}let offSince=context.get('fallbackOffSince')||0;if(!offSince){offSince=now;context.set('fallbackOffSince',offSince);}if((now-offSince)<OUTSIDE_WINDOW_OFF_MS){return {decisionSource:'TIMETABLE_HOLD',stage:'TIMETABLE_HOLD',wanted:applyOverrides(lastKnown),reason:'vision unhealthy -> preserving last known state outside timetable'};}return {decisionSource:'VISION_STALE',stage:'TIMETABLE_OFF',wanted:applyOverrides(desired('EMPTY')),reason:'vision unhealthy -> safe delayed off outside timetable'};}\nfunction rememberAutomation(stage,wanted,now){context.set('activeStage',stage);context.set('lastApply',now);context.set('pendingStage','');context.set('pendingReads',0);context.set('lastKnownAutomation',Object.assign({},wanted));}\nfunction automationTarget(count,now){const stage=stageFor(count);if(count===0){let zeroSince=context.get('zeroSince')||0;if(!zeroSince){zeroSince=now;context.set('zeroSince',zeroSince);}if((now-zeroSince)<ZERO_OFF_MS){return {decisionSource:'PEOPLE_COUNT',stage:'ZERO_HOLD',wanted:applyOverrides(context.get('lastKnownAutomation')||desired(context.get('activeStage')||'EMPTY')),reason:'healthy zero hold'};}}else{context.set('zeroSince',0);}if(stage===context.get('activeStage')){return {decisionSource:'PEOPLE_COUNT',stage,wanted:applyOverrides(context.get('lastKnownAutomation')||desired(stage)),reason:'stage unchanged'};}let pending=context.get('pendingStage')||'';let reads=context.get('pendingReads')||0;if(stage===pending)reads++;else{pending=stage;reads=1;}context.set('pendingStage',pending);context.set('pendingReads',reads);if(reads<STABLE_READINGS||now-(context.get('lastApply')||0)<MIN_CHANGE_MS){return {decisionSource:'PEOPLE_COUNT',stage:'STABILIZING',wanted:applyOverrides(context.get('lastKnownAutomation')||desired(context.get('activeStage')||'EMPTY')),reason:`stabilizing ${stage}`};}const base=desired(stage);rememberAutomation(stage,base,now);return {decisionSource:'PEOPLE_COUNT',stage,wanted:applyOverrides(base),reason:`applied ${stage}`};}\nconst topic=String(msg.topic||'');\nconst now=Date.now();\nconst mode=context.get('mode')||'manual';\nlet diagnostics=[];\nif(topic==='lab/automation/mode'){\n  const next=String(msg.payload).trim().toLowerCase();\n  const value=['manual','monitor','auto'].includes(next)?next:'manual';\n  context.set('mode',value);\n  if(value!=='auto'){context.set('zeroSince',0);context.set('fallbackOffSince',0);}\n  diagnostics.push(m('lab/automation/status','online',true));\n  diagnostics.push(m('lab/automation/mode_state',value,true));\n  diagnostics.push(m('lab/automation/count_source',AUTOMATION_COUNT_SOURCE,true));\n  diagnostics.push(m('lab/automation/last_action',`mode set to ${value}`,true));\n  diagnostics.push(m('lab/automation/priority_state', value==='manual' ? (hasManualOverrides() ? 'MANUAL_OVERRIDE' : 'MANUAL') : value==='monitor' ? 'MONITOR' : 'VISION_STALE', true));\n  diagnostics.push(m('lab/automation/warning','none',true));\n  send([],diagnostics);\n  return null;\n}\nif(topic==='lab/automation/manual_override/clear'){\n  diagnostics.push(m('lab/automation/last_action',clearManualOverride(msg.payload),true));\n  diagnostics.push(m('lab/automation/manual_override_state',manualOverrides(),true));\n  diagnostics.push(m('lab/automation/priority_state', (context.get('mode')||'manual')==='manual' ? 'MANUAL' : ((context.get('mode')||'manual')==='monitor' ? 'MONITOR' : (healthy(now) ? 'PEOPLE_COUNT' : 'VISION_STALE')), true));\n  diagnostics.push(m('lab/automation/warning',healthy(now)?'none':'vision unhealthy -> timetable fallback',true));\n  send([],diagnostics);\n  return null;\n}\nif(topic==='lab/vision/status'){\n  let value=String(msg.payload).toLowerCase();\n  try{const parsed=typeof msg.payload==='object'?msg.payload:JSON.parse(String(msg.payload));value=String(parsed.status||value).toLowerCase();}catch(e){}\n  context.set('serviceOnline',value==='online'||value==='healthy');\n  return null;\n}\nif(topic==='lab/vision/source_status'){\n  context.set('sourceHealthy',String(msg.payload).toLowerCase()==='healthy');\n  return null;\n}\nif(topic==='lab/vision/heartbeat'){\n  context.set('lastHeartbeat',now);\n  return null;\n}\nif(topic==='lab/control/status'){\n  context.set('relayOnline',String(msg.payload).toLowerCase()==='online');\n  return null;\n}\nconst stateMatch=topic.match(/^lab\\/control\\/relay(\\d+)\\/state$/);\nif(stateMatch){\n  const relay=stateMatch[1];\n  const state=String(msg.payload).toUpperCase();\n  const a=actual();\n  a[relay]=state;\n  context.set('actual',a);\n  const last=lastCommand();\n  if((context.get('mode')||'manual')==='manual' || (last[relay] && last[relay]!==state)){\n    setManualOverride(relay,state);\n  }\n  return null;\n}\nif(topic==='lab/automation/internal/tick'){\n  publishState(diagnostics);\n  if((context.get('mode')||'manual')==='manual'){\n    diagnostics.push(m('lab/automation/priority_state', hasManualOverrides() ? 'MANUAL_OVERRIDE' : 'MANUAL', true));\n    send([],diagnostics);\n    return null;\n  }\n  if((context.get('mode')||'manual')==='monitor'){\n    diagnostics.push(m('lab/automation/priority_state', healthy(now) ? 'PEOPLE_COUNT' : 'VISION_STALE', true));\n  }\n  if(!healthy(now)){\n    const fb=fallbackTarget(now);\n    diagnostics.push(m('lab/automation/priority_state',fb.decisionSource,true));\n    diagnostics.push(m('lab/automation/warning',fb.reason,false));\n    if((context.get('mode')||'manual')==='auto'){\n      const commands=commandsFor(fb.wanted);\n      send(commands,diagnostics);\n      return null;\n    }\n    send([],diagnostics);\n    return null;\n  }\n  send([],diagnostics);\n  return null;\n}\nif(topic!=='lab/vision/people_count') return null;\nlet payload=msg.payload;\nif(Buffer.isBuffer(payload))payload=payload.toString();\nif(typeof payload==='string'){try{payload=JSON.parse(payload);}catch(e){diagnostics.push(m('lab/automation/warning','invalid people_count payload ignored',false));send([],diagnostics);return null;}}\nlet ts=Number(payload&&payload.timestamp||0); if(ts<100000000000) ts*=1000;\nconst count=Number(payload&&payload.stable_count);\nconst valid=payload&&payload.source_healthy===true&&payload.status==='online'&&Number.isInteger(count)&&count>=0&&Math.abs(now-ts)<=FRESH_MS;\nif(valid){context.set('latestCount',count);context.set('lastCountTs',now);context.set('serviceOnline',true);context.set('sourceHealthy',true);}publishState(diagnostics);\nif(!valid){const fb=fallbackTarget(now);diagnostics.push(m('lab/automation/warning',fb.reason,false));diagnostics.push(m('lab/automation/priority_state',fb.decisionSource,true));const commands=((context.get('mode')||'manual')==='auto')?commandsFor(fb.wanted):[];send(commands,diagnostics);return null;}\ndiagnostics.push(m('lab/automation/accepted_count',{publisher:'nodered-lab-priority',count,target:stageFor(count),count_source:AUTOMATION_COUNT_SOURCE,timestamp:Math.floor(now/1000)},false));\nif((context.get('mode')||'manual')==='manual'){\n  diagnostics.push(m('lab/automation/priority_state',hasManualOverrides() ? 'MANUAL_OVERRIDE' : 'MANUAL',true));\n  send([],diagnostics);\n  return null;\n}\nconst target=healthy(now)?automationTarget(count,now):fallbackTarget(now);\ndiagnostics.push(m('lab/automation/priority_state',target.decisionSource,true));\ndiagnostics.push(m('lab/automation/intended_state',{publisher:'nodered-lab-priority',stage:target.stage,count,relays:target.wanted,reason:target.reason,decision_source:target.decisionSource,count_source:AUTOMATION_COUNT_SOURCE,timestamp:Math.floor(now/1000)},true));\nif((context.get('mode')||'manual')==='monitor'){\n  send([],diagnostics);\n  return null;\n}\nconst commands=(target.stage==='STABILIZING')?[]:commandsFor(target.wanted);\nsend(commands,diagnostics);\nreturn null;",
     "outputs": 2,
     "timeout": 0,
     "noerr": 0,
@@ -234,7 +286,15 @@
     "libs": [],
     "x": 460,
     "y": 240,
-    "wires": [["out_relay_priority"], ["out_diag_priority", "debug_priority"]]
+    "wires": [
+      [
+        "out_relay_priority"
+      ],
+      [
+        "out_diag_priority",
+        "debug_priority"
+      ]
+    ]
   },
   {
     "id": "out_relay_priority",
@@ -290,4 +350,3 @@
     "wires": []
   }
 ]
-

@@ -658,6 +658,8 @@ def test_node_red_auto_uses_stable_people_count_not_zone_counts():
     assert "AUTOMATION_COUNT_SOURCE = 'total-count'" in func
     assert "lab/automation/status','online',true" in func
     assert "lab/automation/count_source" in func
+    assert "lab/automation/warning',isHealthy?'none':'vision unhealthy -> timetable fallback',true" in func
+    assert "lab/automation/warning','none',true" in func
     assert "stageFor(count)" in func
     assert "payload.zone_counts" not in func
     assert "payload&&payload.zone_counts" not in func
