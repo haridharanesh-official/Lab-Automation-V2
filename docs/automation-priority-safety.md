@@ -185,6 +185,8 @@ Node-RED subscribes to `lab/control/status` from the ESP32 relay node.
 
 If the relay node reports `offline`, Node-RED clears its confirmed relay feedback cache and its last-command cache. This handles lab power-loss cases where the ESP32/relay board loses power and physical loads turn OFF while the AI PC, camera, and people count stay online.
 
+Relay state feedback in Auto is not treated as a manual override. If feedback differs from the desired Auto state, Node-RED should correct it rather than freezing the wrong state. Manual overrides are captured only in Manual mode, where the operator is intentionally controlling relays.
+
 When the relay node reports `online` again:
 
 - Manual mode still sends no automation relay commands.
@@ -241,3 +243,5 @@ Date: June 18, 2026
   - A repeated `online` status produced `0` relay `/set` messages.
 - Final live snapshot after the test showed `mode_state = auto`, `lab/control/status = online`, and `lab/automation/relay_status = online`.
 - The warning later showed stale/fallback when no fresh current people-count message was observed in the short snapshot; that is expected if the live AI publisher is not currently refreshing `lab/vision/people_count`.
+- Follow-up live correction found the blocking state was `lab/automation/manual_override_state {"2":"OFF","3":"OFF","4":"OFF","6":"OFF","7":"OFF","8":"OFF"}` while Auto and people count were healthy. Clearing manual overrides and reconciling relay status restored `FOUR_PLUS` relays `2,3,4,6,7,8` to ON.
+- The Node-RED flow was then updated so Auto-mode relay feedback mismatches no longer create manual overrides. After redeploy, live Auto showed `manual_override_state {}`, `priority_state PEOPLE_COUNT`, `stage = FOUR_PLUS`, and all controlled relay states ON.

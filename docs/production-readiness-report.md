@@ -283,6 +283,10 @@ Status: People-count Auto deployed under supervision; zone-count calibration sti
   - Auto recomputed `FOUR_PLUS` and published one non-retained ON command each for relays `2,3,4,6,7,8`.
   - State feedback returned for relays `2,3,4,6,7,8`.
   - A repeated `online` status produced `0` relay `/set` commands, confirming no command spam after resync.
+  - Follow-up live check found Auto was healthy with non-zero people count, but `manual_override_state` was holding controlled relays OFF.
+  - Root cause: Auto-mode OFF feedback after relay power loss was being captured as a manual override.
+  - Fix: Node-RED now captures relay feedback as a manual override only in Manual mode; Auto-mode mismatches are left for automation correction.
+  - Post-fix live check showed `manual_override_state {}`, `priority_state = PEOPLE_COUNT`, `FOUR_PLUS`, and controlled relay states ON.
 
 ## Failure-Test Readiness
 

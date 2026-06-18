@@ -26,6 +26,8 @@ On June 17, 2026, the live `labos` runtime was inspected over SSH with physical 
 - Final deployed mode after this pass is `auto`, per supervised deployment request.
 - June 18 relay power-loss recovery fix deployed: when `lab/control/status` reports `offline`, Node-RED now clears cached relay feedback and last-command state; when it reports `online` again in Auto with healthy non-zero people count, Node-RED recomputes the desired state and sends one reconciliation command per controlled relay that needs restoration.
 - Controlled live validation simulated `offline -> online` with fresh healthy `stable_count = 7`; Auto recomputed `FOUR_PLUS`, published one non-retained ON command each for relays `2,3,4,6,7,8`, received matching state feedback, and a repeated `online` status produced `0` relay `/set` commands.
+- Follow-up live issue showed Auto was healthy with `stable_count = 7`, but all controlled relays were held OFF by `manual_override_state`. Root cause: Auto-mode relay OFF feedback after power loss had been captured as manual overrides. The flow now captures manual overrides only in Manual mode; Auto feedback mismatches are corrected by automation instead of frozen.
+- After clearing overrides and redeploying the fix, live Auto showed `manual_override_state {}`, `priority_state = PEOPLE_COUNT`, `stage = FOUR_PLUS`, and all controlled relay states ON.
 
 ## Blockers
 - **Physical Walk Test**: Requires a human to walk through zones 1-6 physically in front of the camera before zone-count automation can be trusted.

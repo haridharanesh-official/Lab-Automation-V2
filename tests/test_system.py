@@ -535,6 +535,14 @@ def test_priority_controller_relay_reconnect_does_not_resync_manual_or_monitor()
         assert result["commands"] == []
 
 
+def test_priority_controller_auto_feedback_mismatch_is_not_manual_override():
+    controller = PrioritySafetyController(mode="auto")
+    controller.update_confirmed(2, "OFF", infer_manual=False)
+    assert controller.manual_overrides == {}
+    controller.update_confirmed(2, "OFF", infer_manual=True)
+    assert controller.manual_overrides == {2: "OFF"}
+
+
 def test_fallback_window_helper():
     assert is_within_fallback_window(datetime(2026, 6, 16, 8, 30))
     assert is_within_fallback_window(datetime(2026, 6, 16, 13, 15))
@@ -718,6 +726,8 @@ def test_node_red_auto_uses_stable_people_count_not_zone_counts():
     assert "relay controller reconnected -> resync desired Auto state" in func
     assert "context.set('actual',{})" in func
     assert "context.set('lastCommand',{})" in func
+    assert "if((context.get('mode')||'manual')==='manual'){" in func
+    assert "last[relay] && last[relay]!==state" not in func
     assert "stageFor(count)" in func
     assert "payload.zone_counts" not in func
     assert "payload&&payload.zone_counts" not in func
