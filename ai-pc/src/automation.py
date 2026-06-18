@@ -102,6 +102,7 @@ class PrioritySafetyController:
     last_heartbeat_ms: int = 0
     last_count_ms: int = 0
     latest_count: int | None = None
+    latest_count_healthy: bool = False
     active_stage: str = "EMPTY_STAGE"
     high_load_latch: bool = False
     zero_since_ms: int = 0
@@ -155,9 +156,13 @@ class PrioritySafetyController:
 
     def mark_service_status(self, status: str) -> None:
         self.service_online = status.lower() in {"online", "healthy"}
+        if not self.service_online:
+            self.zero_since_ms = 0
 
     def mark_source_status(self, status: str) -> None:
         self.source_healthy = status.lower() == "healthy"
+        if not self.source_healthy:
+            self.zero_since_ms = 0
 
     def mark_heartbeat(self, now_ms: int) -> None:
         self.last_heartbeat_ms = now_ms
@@ -168,8 +173,8 @@ class PrioritySafetyController:
             and self.source_healthy
             and self.last_heartbeat_ms > 0
             and self.last_count_ms > 0
+            and self.latest_count_healthy
             and now_ms - self.last_heartbeat_ms <= self.fresh_ms
-            and now_ms - self.last_count_ms <= self.fresh_ms
         )
 
     def _apply_manual_overrides(self, states: dict[int, str]) -> dict[int, str]:
@@ -244,7 +249,7 @@ class PrioritySafetyController:
             if self.zero_since_ms == 0:
                 self.zero_since_ms = now_ms
             if now_ms - self.zero_since_ms < self.zero_off_ms:
-                base = dict(self.last_known_automation or desired_lab_relays_for_stage(self.active_stage))
+                base = dict(self.last_known_automation or self.confirmed or desired_lab_relays_for_stage(self.active_stage))
                 return "ZERO_HOLD", self._apply_manual_overrides(base), "healthy zero hold"
             self.high_load_latch = False
             stage = "EMPTY_STAGE"
@@ -276,12 +281,15 @@ class PrioritySafetyController:
             and abs(now_ms - ts) <= self.fresh_ms
         )
         if not valid:
+            self.latest_count_healthy = False
+            self.zero_since_ms = 0
             target_stage, wanted, reason = self._preserve_target("vision unhealthy -> preserving relay state")
             commands = []
             return {"accepted": False, "reason": reason, "stage": target_stage, "wanted": wanted, "commands": commands}
 
         self.latest_count = count
         self.last_count_ms = now_ms
+        self.latest_count_healthy = True
         if self.mode == "manual":
             stage, wanted, reason = self._preserve_target("manual mode -> preserving relay state")
             return {
