@@ -28,6 +28,7 @@ On June 17, 2026, the live `labos` runtime was inspected over SSH with physical 
 - Controlled live validation simulated `offline -> online` with fresh healthy `stable_count = 7`; Auto recomputed `FOUR_PLUS`, published one non-retained ON command each for relays `2,3,4,6,7,8`, received matching state feedback, and a repeated `online` status produced `0` relay `/set` commands.
 - Follow-up live issue showed Auto was healthy with `stable_count = 7`, but all controlled relays were held OFF by `manual_override_state`. Root cause: Auto-mode relay OFF feedback after power loss had been captured as manual overrides. The flow now captures manual overrides only in Manual mode; Auto feedback mismatches are corrected by automation instead of frozen.
 - After clearing overrides and redeploying the fix, live Auto showed `manual_override_state {}`, `priority_state = PEOPLE_COUNT`, `stage = FOUR_PLUS`, and all controlled relay states ON.
+- Periodic Auto feedback reconciliation is now deployed. Every controller tick, currently about 10 seconds, Node-RED compares the desired people-count relay state with `lab/control/relayX/state` and sends only missing/mismatched non-retained corrections. Controlled live validation forced `relay2/state OFF` while `FOUR_PLUS` required relay 2 ON; the next tick sent one `lab/control/relay2/set ON`, feedback returned ON, and later ticks did not spam repeated commands.
 
 ## Blockers
 - **Physical Walk Test**: Requires a human to walk through zones 1-6 physically in front of the camera before zone-count automation can be trusted.

@@ -75,6 +75,7 @@ From the deployed priority controller:
 | `ZERO_OFF_MS` | `300000` ms | Empty room must persist for 5 minutes before OFF is allowed. |
 | `MIN_CHANGE_MS` | `8000` ms | Minimum 8 seconds between applied automation stage changes. |
 | `OUTSIDE_WINDOW_OFF_MS` | `300000` ms | Outside timetable fallback, preserve last state for 5 minutes before delayed OFF. |
+| Controller tick / reconciliation | about `10000` ms | Auto-only feedback reconciliation checks desired relay state against `lab/control/relayX/state`. |
 | `AUTOMATION_COUNT_SOURCE` | `total-count` | Node-RED Auto currently reads total debounced `stable_count`, not zones. |
 
 Fallback timetable windows:
@@ -155,6 +156,22 @@ Node-RED deduplicates relay commands against:
 - empty-delay requirement
 
 Relay `/set` commands are emitted only in Auto and are sent with `retain=false`.
+
+## Relay Power Recovery And Reconciliation
+
+Node-RED subscribes to `lab/control/status`.
+
+When the relay controller reports `offline`, Node-RED clears its cached relay feedback and last-command memory. When the controller reports `online` again, Auto mode with healthy non-zero people count recomputes the desired state from the latest `stable_count` and sends one non-retained correction command for each controlled relay with unknown or mismatched feedback.
+
+Node-RED also performs a safe Auto-only reconciliation on the controller tick, currently about every 10 seconds:
+
+- desired ON + feedback OFF, unknown, or missing -> send one ON correction
+- desired OFF + feedback ON -> send one OFF correction
+- feedback already matches desired -> send no command
+- Manual and Monitor modes -> send zero physical relay commands
+- stale/unhealthy vision -> preserve relay states and do not force OFF from people count
+
+This means relay/ESP32 power recovery no longer depends on `stable_count` changing. If the lab has people and the relay node returns with loads OFF, Auto can restore the desired lights/fans from relay feedback mismatch alone.
 
 ## Live Snapshot
 

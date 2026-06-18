@@ -143,4 +143,6 @@ Status labels:
 - [x] Leave Auto enabled after final supervised gate passed.
 - [x] Fix relay power-loss recovery: `lab/control/status offline` clears known relay feedback/last commands, and `online` in Auto with healthy non-zero count resyncs desired relay state even when `stable_count` did not change.
 - [x] Validate controlled relay reconnect simulation: `stable_count = 7` produced one non-retained ON command each for relays `2,3,4,6,7,8`; matching state feedback returned; repeated `online` produced `0` relay `/set`.
+- [x] Add Auto-only periodic feedback reconciliation: every controller tick, compare desired state to `lab/control/relayX/state`, resend only missing/mismatched non-retained commands, and keep Manual/Monitor at `0` physical relay commands.
+- [x] Validate periodic mismatch correction: forced `lab/control/relay2/state OFF` while desired `FOUR_PLUS` required ON; Node-RED sent one `lab/control/relay2/set ON`, feedback returned ON, and no repeated command spam followed.
 - [ ] Continue longer supervised observation for empty-delay OFF, camera/AI failure fallback, MQTT interruption, ESP32 restart, and no-flicker behavior.

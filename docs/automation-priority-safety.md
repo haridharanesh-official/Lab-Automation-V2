@@ -100,7 +100,7 @@ Current `priority_state` meanings:
 Manual override has the highest priority.
 
 - If a relay state changes while the system is in `manual`, that state is captured as a manual override.
-- If relay feedback changes unexpectedly away from the last automation command, the flow treats it as a manual override as well.
+- Relay feedback changes in `auto` are not captured as manual overrides. Auto-mode feedback mismatch is treated as something the automation should correct.
 - Active manual overrides are published under `lab/automation/manual_override_state`.
 - Automation overlays those manual states onto any fallback or people-count target.
 
@@ -198,6 +198,21 @@ When the relay node reports `online` again:
 
 This fixes the case where `stable_count` does not change, but the relay outputs must still be restored after ESP32/relay power returns.
 
+## Periodic Feedback Reconciliation
+
+Node-RED also performs a safe Auto-only relay feedback reconciliation on the controller tick, currently every 10 seconds.
+
+During this reconciliation:
+
+- Manual mode emits zero automation relay commands.
+- Monitor mode emits zero physical relay commands.
+- Auto mode runs only when vision is healthy and a latest `stable_count` exists.
+- Node-RED recomputes the desired people-count stage from the latest `stable_count`.
+- If desired relay state differs from `lab/control/relayX/state`, Node-RED sends one non-retained correction command.
+- If feedback already matches the desired state, Node-RED sends no relay command.
+
+This covers the second power-loss shape: the ESP32 may come back online without a clean new `offline -> online` transition being observed by Node-RED, or a relay may report `OFF` after the desired Auto state was already remembered as `ON`. The periodic check corrects that mismatch without waiting for `stable_count` to change and without blindly publishing repeated ON commands.
+
 ## Live Deployment Validation on `labos`
 
 Date: June 16, 2026
@@ -245,3 +260,4 @@ Date: June 18, 2026
 - The warning later showed stale/fallback when no fresh current people-count message was observed in the short snapshot; that is expected if the live AI publisher is not currently refreshing `lab/vision/people_count`.
 - Follow-up live correction found the blocking state was `lab/automation/manual_override_state {"2":"OFF","3":"OFF","4":"OFF","6":"OFF","7":"OFF","8":"OFF"}` while Auto and people count were healthy. Clearing manual overrides and reconciling relay status restored `FOUR_PLUS` relays `2,3,4,6,7,8` to ON.
 - The Node-RED flow was then updated so Auto-mode relay feedback mismatches no longer create manual overrides. After redeploy, live Auto showed `manual_override_state {}`, `priority_state PEOPLE_COUNT`, `stage = FOUR_PLUS`, and all controlled relay states ON.
+- A follow-up deploy added periodic Auto feedback reconciliation. Controlled MQTT validation forced `lab/control/relay2/state OFF` while the desired `FOUR_PLUS` state required relay 2 ON; the next tick sent exactly one `lab/control/relay2/set ON`, feedback returned ON, and subsequent ticks did not spam more relay commands.

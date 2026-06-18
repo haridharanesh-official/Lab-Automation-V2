@@ -543,6 +543,69 @@ def test_priority_controller_auto_feedback_mismatch_is_not_manual_override():
     assert controller.manual_overrides == {2: "OFF"}
 
 
+def test_priority_controller_periodic_reconcile_corrects_on_mismatch():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 18, 10, 30, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.latest_count = 5
+    controller.last_count_ms = now_ms
+    controller.confirmed = {2: "OFF", 3: "ON", 4: "OFF", 6: "ON", 7: "ON", 8: "ON"}
+    result = controller.reconcile_feedback(now)
+    assert result["stage"] == "FOUR_PLUS"
+    assert {command["relay"] for command in result["commands"]} == {2, 4}
+    assert all(command["state"] == "ON" for command in result["commands"])
+
+
+def test_priority_controller_periodic_reconcile_corrects_off_mismatch():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 18, 10, 30, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.latest_count = 0
+    controller.last_count_ms = now_ms
+    controller.active_stage = "EMPTY"
+    controller.last_known_automation = desired_lab_relays_for_stage("EMPTY")
+    controller.confirmed = {2: "ON", 3: "OFF", 4: "OFF", 6: "OFF", 7: "ON", 8: "OFF"}
+    result = controller.reconcile_feedback(now)
+    assert result["stage"] == "EMPTY"
+    assert result["commands"] == [{"relay": 2, "state": "OFF"}, {"relay": 7, "state": "OFF"}]
+
+
+def test_priority_controller_periodic_reconcile_suppressed_outside_auto():
+    now = datetime(2026, 6, 18, 10, 30, 0)
+    now_ms = int(now.timestamp() * 1000)
+    for mode in ("manual", "monitor"):
+        controller = PrioritySafetyController(mode=mode)
+        controller.mark_service_status("online")
+        controller.mark_source_status("healthy")
+        controller.mark_heartbeat(now_ms)
+        controller.latest_count = 5
+        controller.last_count_ms = now_ms
+        controller.confirmed = {2: "OFF"}
+        assert controller.reconcile_feedback(now)["commands"] == []
+
+
+def test_priority_controller_periodic_reconcile_no_spam_when_feedback_correct():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 18, 10, 30, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.latest_count = 5
+    controller.last_count_ms = now_ms
+    controller.confirmed = desired_lab_relays_for_stage("FOUR_PLUS")
+    first = controller.reconcile_feedback(now)
+    second = controller.reconcile_feedback(now)
+    assert first["commands"] == []
+    assert second["commands"] == []
+
+
 def test_fallback_window_helper():
     assert is_within_fallback_window(datetime(2026, 6, 16, 8, 30))
     assert is_within_fallback_window(datetime(2026, 6, 16, 13, 15))
@@ -724,6 +787,8 @@ def test_node_red_auto_uses_stable_people_count_not_zone_counts():
     assert "forceCommandsForUnknownOrMismatch" in func
     assert "relay controller offline -> cleared known relay feedback" in func
     assert "relay controller reconnected -> resync desired Auto state" in func
+    assert "periodicReconcileTarget" in func
+    assert "periodic relay feedback reconciliation" in func
     assert "context.set('actual',{})" in func
     assert "context.set('lastCommand',{})" in func
     assert "if((context.get('mode')||'manual')==='manual'){" in func

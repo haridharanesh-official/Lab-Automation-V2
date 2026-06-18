@@ -216,6 +216,26 @@ class PrioritySafetyController:
             "reason": "relay controller reconnected -> resync desired Auto state",
         }
 
+    def reconcile_feedback(self, now: datetime) -> dict:
+        now_ms = int(now.timestamp() * 1000)
+        count = self.latest_count
+        if self.mode != "auto" or not self.vision_is_healthy(now_ms) or count is None:
+            return {"stage": "RECONCILE_SKIPPED", "wanted": {}, "commands": []}
+        if count > 0:
+            stage = stage_for_people_count(count)
+            base = desired_lab_relays_for_stage(stage)
+        else:
+            stage = self.active_stage
+            base = dict(self.last_known_automation or desired_lab_relays_for_stage(stage))
+        wanted = self._apply_manual_overrides(base)
+        commands = self._force_commands_for_unknown_or_mismatch(wanted)
+        return {
+            "stage": stage,
+            "wanted": wanted,
+            "commands": commands,
+            "reason": "periodic relay feedback reconciliation",
+        }
+
     def _fallback_target(self, now: datetime, now_ms: int) -> tuple[str, dict[int, str], str]:
         within_window = is_within_fallback_window(now)
         if within_window:
