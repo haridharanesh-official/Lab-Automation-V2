@@ -179,6 +179,23 @@ Relay mapping for the deployed `labos` runtime:
 - monitor mode publishes diagnostics and intended state only
 - final recovery order remains Manual, then Monitor, then supervised Auto
 
+## Relay Controller Power Recovery
+
+Node-RED subscribes to `lab/control/status` from the ESP32 relay node.
+
+If the relay node reports `offline`, Node-RED clears its confirmed relay feedback cache and its last-command cache. This handles lab power-loss cases where the ESP32/relay board loses power and physical loads turn OFF while the AI PC, camera, and people count stay online.
+
+When the relay node reports `online` again:
+
+- Manual mode still sends no automation relay commands.
+- Monitor mode still sends no physical relay commands.
+- Auto mode recomputes desired state from the latest healthy `lab/vision/people_count.stable_count`.
+- If vision is healthy and `stable_count > 0`, Node-RED sends one reconciliation command for each controlled relay whose feedback is unknown or different.
+- Relay `/set` commands remain non-retained.
+- Repeated `online` status messages do not spam duplicate relay commands.
+
+This fixes the case where `stable_count` does not change, but the relay outputs must still be restored after ESP32/relay power returns.
+
 ## Live Deployment Validation on `labos`
 
 Date: June 16, 2026
@@ -209,3 +226,18 @@ Notes:
 - Live validation was performed outside the timetable windows, so `TIMETABLE_HOLD` was the expected fallback stage.
 - The inside-window fallback branch (`TIMETABLE_FALLBACK`) remains covered by software tests and still needs a live time-window validation pass during `08:30-12:30` or `13:00-16:30`.
 - No Auto-mode relay validation was performed in this deployment step.
+
+## Relay Reconnect Validation on `labos`
+
+Date: June 18, 2026
+
+- Deployed the relay reconnect reconciliation fix to live Node-RED.
+- Backed up the previous live flow to `/home/labos/labos-v2-backups/nodered/flows-20260618-before-relay-resync.json`.
+- Controlled MQTT validation simulated relay node power loss/recovery:
+  - `lab/control/status offline` cleared known relay feedback and last-command state.
+  - `lab/control/status online` in Auto mode with fresh healthy `stable_count = 7` recomputed `FOUR_PLUS`.
+  - Node-RED published one non-retained ON command each for relays `2,3,4,6,7,8`.
+  - State feedback returned for relays `2,3,4,6,7,8`.
+  - A repeated `online` status produced `0` relay `/set` messages.
+- Final live snapshot after the test showed `mode_state = auto`, `lab/control/status = online`, and `lab/automation/relay_status = online`.
+- The warning later showed stale/fallback when no fresh current people-count message was observed in the short snapshot; that is expected if the live AI publisher is not currently refreshing `lab/vision/people_count`.

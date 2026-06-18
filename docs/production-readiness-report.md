@@ -275,6 +275,14 @@ Status: People-count Auto deployed under supervision; zone-count calibration sti
   - relay feedback observed: `lab/control/relay4/state ON`
   - no repeated identical command spam observed during the Auto capture
   - final mode left as `auto` under supervision
+- Relay power-loss recovery fix on June 18, 2026:
+  - Node-RED now subscribes to `lab/control/status` as relay controller availability.
+  - `offline` clears cached relay feedback and last-command state.
+  - `online` in Auto with healthy non-zero people count recomputes desired state and sends one reconciliation command per controlled relay with unknown or mismatched feedback.
+  - Controlled live validation simulated `offline -> online` with fresh healthy `stable_count = 7`.
+  - Auto recomputed `FOUR_PLUS` and published one non-retained ON command each for relays `2,3,4,6,7,8`.
+  - State feedback returned for relays `2,3,4,6,7,8`.
+  - A repeated `online` status produced `0` relay `/set` commands, confirming no command spam after resync.
 
 ## Failure-Test Readiness
 

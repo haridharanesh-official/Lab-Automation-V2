@@ -482,6 +482,59 @@ def test_priority_controller_manual_and_monitor_stale_emit_no_commands():
     assert monitor_result["commands"] == []
 
 
+def test_priority_controller_relay_reconnect_resyncs_unchanged_auto_count():
+    controller = PrioritySafetyController(mode="auto")
+    controller.stable_reads_required = 1
+    controller.min_change_ms = 0
+    now = datetime(2026, 6, 16, 9, 5, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    payload = {
+        "timestamp": now_ms,
+        "stable_count": 7,
+        "source_healthy": True,
+        "status": "online",
+    }
+    first = controller.process_people_count(payload, now)
+    assert first["stage"] == "FOUR_PLUS"
+    assert first["commands"]
+    for relay in (2, 3, 4, 6, 7, 8):
+        controller.update_confirmed(relay, "ON")
+    controller.last_commanded = {relay: "ON" for relay in (2, 3, 4, 6, 7, 8)}
+
+    offline = controller.mark_relay_status("offline")
+    assert offline["commands"] == []
+    assert controller.confirmed == {}
+    assert controller.last_commanded == {}
+
+    reconnect = controller.mark_relay_status("online", now)
+    assert reconnect["stage"] == "FOUR_PLUS"
+    assert {command["relay"] for command in reconnect["commands"]} == {2, 3, 4, 6, 7, 8}
+    assert all(command["state"] == "ON" for command in reconnect["commands"])
+
+    repeated = controller.mark_relay_status("online", now)
+    assert repeated["commands"] == []
+
+
+def test_priority_controller_relay_reconnect_does_not_resync_manual_or_monitor():
+    now = datetime(2026, 6, 16, 9, 5, 0)
+    now_ms = int(now.timestamp() * 1000)
+    for mode in ("manual", "monitor"):
+        controller = PrioritySafetyController(mode=mode)
+        controller.mark_service_status("online")
+        controller.mark_source_status("healthy")
+        controller.mark_heartbeat(now_ms)
+        controller.latest_count = 7
+        controller.last_count_ms = now_ms
+        controller.last_commanded = {2: "ON", 7: "ON"}
+        controller.confirmed = {2: "ON", 7: "ON"}
+        controller.mark_relay_status("offline")
+        result = controller.mark_relay_status("online", now)
+        assert result["commands"] == []
+
+
 def test_fallback_window_helper():
     assert is_within_fallback_window(datetime(2026, 6, 16, 8, 30))
     assert is_within_fallback_window(datetime(2026, 6, 16, 13, 15))
@@ -660,6 +713,11 @@ def test_node_red_auto_uses_stable_people_count_not_zone_counts():
     assert "lab/automation/count_source" in func
     assert "lab/automation/warning',isHealthy?'none':'vision unhealthy -> timetable fallback',true" in func
     assert "lab/automation/warning','none',true" in func
+    assert "forceCommandsForUnknownOrMismatch" in func
+    assert "relay controller offline -> cleared known relay feedback" in func
+    assert "relay controller reconnected -> resync desired Auto state" in func
+    assert "context.set('actual',{})" in func
+    assert "context.set('lastCommand',{})" in func
     assert "stageFor(count)" in func
     assert "payload.zone_counts" not in func
     assert "payload&&payload.zone_counts" not in func

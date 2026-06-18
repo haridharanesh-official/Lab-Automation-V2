@@ -24,6 +24,8 @@ On June 17, 2026, the live `labos` runtime was inspected over SSH with physical 
 - Final clear-and-deploy pass fixed stale retained warning behavior: healthy vision now publishes retained `lab/automation/warning = none`; unhealthy/stale vision publishes a retained fallback warning.
 - Final 4+ supervised Auto gate passed: with relay4/Fan 3 first forced OFF in Manual and overrides cleared, live `stable_count = 4` selected `FOUR_PLUS`; Auto emitted exactly one relay command, `lab/control/relay4/set ON`, and feedback arrived as `lab/control/relay4/state ON`. No repeated identical command spam was observed, and `lab/automation/warning` remained `none`.
 - Final deployed mode after this pass is `auto`, per supervised deployment request.
+- June 18 relay power-loss recovery fix deployed: when `lab/control/status` reports `offline`, Node-RED now clears cached relay feedback and last-command state; when it reports `online` again in Auto with healthy non-zero people count, Node-RED recomputes the desired state and sends one reconciliation command per controlled relay that needs restoration.
+- Controlled live validation simulated `offline -> online` with fresh healthy `stable_count = 7`; Auto recomputed `FOUR_PLUS`, published one non-retained ON command each for relays `2,3,4,6,7,8`, received matching state feedback, and a repeated `online` status produced `0` relay `/set` commands.
 
 ## Blockers
 - **Physical Walk Test**: Requires a human to walk through zones 1-6 physically in front of the camera before zone-count automation can be trusted.

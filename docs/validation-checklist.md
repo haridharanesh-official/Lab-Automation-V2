@@ -141,4 +141,6 @@ Status labels:
 - [x] Fix stale retained warning behavior so healthy vision publishes retained `lab/automation/warning = none`.
 - [x] Rerun a supervised `4+` Auto scene where Auto itself commands relay4/Fan 3 ON: observed `lab/control/relay4/set ON` followed by `lab/control/relay4/state ON`.
 - [x] Leave Auto enabled after final supervised gate passed.
+- [x] Fix relay power-loss recovery: `lab/control/status offline` clears known relay feedback/last commands, and `online` in Auto with healthy non-zero count resyncs desired relay state even when `stable_count` did not change.
+- [x] Validate controlled relay reconnect simulation: `stable_count = 7` produced one non-retained ON command each for relays `2,3,4,6,7,8`; matching state feedback returned; repeated `online` produced `0` relay `/set`.
 - [ ] Continue longer supervised observation for empty-delay OFF, camera/AI failure fallback, MQTT interruption, ESP32 restart, and no-flicker behavior.

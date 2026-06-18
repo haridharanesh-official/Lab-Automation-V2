@@ -117,6 +117,8 @@ class PrioritySafetyController:
     zero_off_ms: int = 300_000
     min_change_ms: int = 8_000
     outside_window_off_delay_ms: int = 300_000
+    relay_online: bool = False
+    relay_resync_needed: bool = False
 
     def set_mode(self, mode: str) -> None:
         if mode not in {"manual", "monitor", "auto"}:
@@ -131,6 +133,20 @@ class PrioritySafetyController:
         self.confirmed[relay] = value
         if infer_manual:
             self.manual_overrides[relay] = value
+
+    def mark_relay_status(self, status: str, now: datetime | None = None) -> dict:
+        online = status.lower() == "online"
+        was_online = self.relay_online
+        self.relay_online = online
+        if not online:
+            self.confirmed.clear()
+            self.last_commanded.clear()
+            self.relay_resync_needed = True
+            return {"status": "offline", "commands": []}
+        if not was_online and self.relay_resync_needed:
+            if now is not None:
+                return self.resync_after_relay_online(now)
+        return {"status": "online", "commands": []}
 
     def clear_manual_override(self, relay: int | None = None) -> None:
         if relay is None:
@@ -172,6 +188,33 @@ class PrioritySafetyController:
                 commands.append({"relay": relay, "state": state})
                 self.last_commanded[relay] = state
         return commands
+
+    def _force_commands_for_unknown_or_mismatch(self, wanted: dict[int, str]) -> list[dict]:
+        commands = []
+        for relay, state in wanted.items():
+            if self.confirmed.get(relay) != state:
+                commands.append({"relay": relay, "state": state})
+                self.last_commanded[relay] = state
+        return commands
+
+    def resync_after_relay_online(self, now: datetime) -> dict:
+        now_ms = int(now.timestamp() * 1000)
+        count = self.latest_count
+        if self.mode != "auto" or not self.vision_is_healthy(now_ms) or count is None or count <= 0:
+            return {"stage": "RELAY_ONLINE_NO_RESYNC", "wanted": {}, "commands": []}
+        stage = stage_for_people_count(count)
+        base = desired_lab_relays_for_stage(stage)
+        self.active_stage = stage
+        self.last_known_automation = dict(base)
+        wanted = self._apply_manual_overrides(base)
+        commands = self._force_commands_for_unknown_or_mismatch(wanted)
+        self.relay_resync_needed = False
+        return {
+            "stage": stage,
+            "wanted": wanted,
+            "commands": commands,
+            "reason": "relay controller reconnected -> resync desired Auto state",
+        }
 
     def _fallback_target(self, now: datetime, now_ms: int) -> tuple[str, dict[int, str], str]:
         within_window = is_within_fallback_window(now)
