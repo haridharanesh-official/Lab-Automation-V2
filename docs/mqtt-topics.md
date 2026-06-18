@@ -39,7 +39,14 @@ Counting modes:
 - `total-count`: AI runs on the full frame, counts total people, does not require valid zone polygons, publishes `stable_count`, and sets zone fields to `null`.
 - `zone-count`: AI runs on the full frame, assigns people to zones by bottom-centre point, publishes `stable_count` and `zone_counts`, and requires `config/zones.json`.
 
-Current Auto logic on `labos` uses only `stable_count`:
+Current Auto logic on `labos` uses only `stable_count` and the current 8-relay final lab wiring:
+
+- `0`: hold the current Auto stage for 60 continuous seconds, then turn controlled relays `2,3,4,6,7,8` OFF and reset the high-load latch.
+- `1-3`: use `LOW_STAGE` if the high-load latch is inactive: relays `2,3,6,7` ON and relays `4,8` OFF.
+- `4+`: enter `HIGH_STAGE`: relays `2,3,4,6,7,8` ON and high-load latch active.
+- after `HIGH_STAGE`, counts `1-3` stay HIGH until the lab is confirmed empty for 60 seconds.
+
+Relays `1` and `5` are spare and must not be commanded by automation. Ten-relay support is future planned only.
 
 - `0` people: all controlled loads OFF only after empty/off delay.
 - `1` person: both lights ON.

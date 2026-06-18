@@ -140,8 +140,9 @@ Behavior outside fallback windows:
 When mode is `auto` and vision becomes stale or unhealthy:
 
 - `mode_state` remains `auto`
-- `priority_state` moves to `TIMETABLE_FALLBACK`, `TIMETABLE_HOLD`, or `VISION_STALE`
+- `priority_state` moves to `VISION_STALE`
 - people count is ignored until vision is healthy again
+- Node-RED preserves current/last-known relay state and emits zero relay `/set` commands
 
 ## People-Count Automation
 
@@ -156,25 +157,28 @@ Healthy means:
 
 Zone mapping remains provisional and is used for display/debug validation only. `zone_counts` may be present in the payload, and `zone-count` publisher mode can produce zone counts for future validation, but it must not drive Auto relay decisions until zone calibration is physically validated and Node-RED is explicitly switched to a zone-count source.
 
-The current stage mapping remains:
+The current 8-relay stage mapping is:
 
-- `0` => `EMPTY`
-- `1` => `ONE`
-- `2-3` => `TWO_THREE`
-- `4+` => `FOUR_PLUS`
+- `0` => `ZERO_HOLD`, then `EMPTY_STAGE` after 60 continuous seconds
+- `1-3` with high-load latch inactive => `LOW_STAGE`
+- `1-3` with high-load latch active => `HIGH_STAGE`
+- `4+` => `HIGH_STAGE` and high-load latch active
 
 Relay mapping for the deployed `labos` runtime:
 
-- `EMPTY` => relays `2, 3, 4, 6, 7, 8` OFF only after the configured empty delay
-- `ONE` => both lights ON: relays `2, 7`
-- `TWO_THREE` => both lights + Fan 1 + Fan 4 ON: relays `2, 3, 6, 7`
-- `FOUR_PLUS` => both lights + all fans ON: relays `2, 3, 4, 6, 7, 8`
+- `EMPTY_STAGE` => relays `2, 3, 4, 6, 7, 8` OFF only after the 60-second empty delay
+- `LOW_STAGE` => both lights + Fan 1 + Fan 4 ON: relays `2, 3, 6, 7`; relays `4, 8` OFF
+- `HIGH_STAGE` => both lights + all fans ON: relays `2, 3, 4, 6, 7, 8`
+
+Relays `1` and `5` are spare on the current live 8-channel hardware and must never be commanded by automation. Ten-relay support is future planned only.
+
+The high-load latch exists to prevent relay flicker when the count jumps between `3` and `4` or people move through camera blind spots. Once `HIGH_STAGE` is reached, the system remains in `HIGH_STAGE` until `stable_count = 0` is healthy and continuous for 60 seconds.
 
 ## No-Flicker and Safety Rules
 
 - duplicate or stale counts are ignored
 - healthy zero count uses shutdown delay, not immediate OFF
-- relay commands are deduplicated against both feedback state and last command
+- relay commands are deduplicated against feedback state and the last observed correction condition
 - manual mode never emits relay `/set`
 - monitor mode publishes diagnostics and intended state only
 - final recovery order remains Manual, then Monitor, then supervised Auto
@@ -192,7 +196,9 @@ When the relay node reports `online` again:
 - Manual mode still sends no automation relay commands.
 - Monitor mode still sends no physical relay commands.
 - Auto mode recomputes desired state from the latest healthy `lab/vision/people_count.stable_count`.
-- If vision is healthy and `stable_count > 0`, Node-RED sends one reconciliation command for each controlled relay whose feedback is unknown or different.
+- If vision is healthy, Node-RED recomputes desired state from `stable_count`, current stage, and the high-load latch.
+- If `stable_count = 0`, the 60-second empty timer is honored before OFF commands are allowed.
+- Node-RED sends one reconciliation command for each controlled relay whose feedback is unknown or different.
 - Relay `/set` commands remain non-retained.
 - Repeated `online` status messages do not spam duplicate relay commands.
 

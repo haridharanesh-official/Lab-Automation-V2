@@ -18,25 +18,20 @@ def desired_relays(zones: list[int]) -> list[bool]:
 
 def stage_for_people_count(count: int) -> str:
     if count <= 0:
-        return "EMPTY"
-    if count == 1:
-        return "ONE"
+        return "EMPTY_STAGE"
     if count < 4:
-        return "TWO_THREE"
-    return "FOUR_PLUS"
+        return "LOW_STAGE"
+    return "HIGH_STAGE"
 
 
 def desired_lab_relays_for_stage(stage: str) -> dict[int, str]:
     states = {2: "OFF", 3: "OFF", 4: "OFF", 6: "OFF", 7: "OFF", 8: "OFF"}
-    if stage == "ONE":
-        states[2] = "ON"
-        states[7] = "ON"
-    elif stage == "TWO_THREE":
+    if stage == "LOW_STAGE":
         states[2] = "ON"
         states[3] = "ON"
         states[6] = "ON"
         states[7] = "ON"
-    elif stage == "FOUR_PLUS":
+    elif stage == "HIGH_STAGE":
         for relay in states:
             states[relay] = "ON"
     return states
@@ -107,15 +102,12 @@ class PrioritySafetyController:
     last_heartbeat_ms: int = 0
     last_count_ms: int = 0
     latest_count: int | None = None
-    active_stage: str = "EMPTY"
-    pending_stage: str = ""
-    pending_reads: int = 0
+    active_stage: str = "EMPTY_STAGE"
+    high_load_latch: bool = False
     zero_since_ms: int = 0
     last_apply_ms: int = 0
-    stable_reads_required: int = 3
     fresh_ms: int = 15_000
-    zero_off_ms: int = 300_000
-    min_change_ms: int = 8_000
+    zero_off_ms: int = 60_000
     relay_online: bool = False
     relay_resync_needed: bool = False
 
@@ -181,6 +173,8 @@ class PrioritySafetyController:
         )
 
     def _apply_manual_overrides(self, states: dict[int, str]) -> dict[int, str]:
+        if self.mode != "manual":
+            return dict(states)
         applied = dict(states)
         for relay, state in self.manual_overrides.items():
             applied[relay] = state
@@ -203,6 +197,13 @@ class PrioritySafetyController:
     def _preserve_target(self, reason: str) -> tuple[str, dict[int, str], str]:
         base = dict(self.last_known_automation or self.confirmed)
         return "VISION_STALE", self._apply_manual_overrides(base), reason
+
+    def _stage_for_latch(self, count: int) -> str:
+        if count <= 0:
+            return "EMPTY_STAGE"
+        if count >= 4:
+            return "HIGH_STAGE"
+        return "HIGH_STAGE" if self.high_load_latch else "LOW_STAGE"
 
     def resync_after_relay_online(self, now: datetime) -> dict:
         now_ms = int(now.timestamp() * 1000)
@@ -238,55 +239,24 @@ class PrioritySafetyController:
             "reason": f"periodic relay feedback reconciliation: {reason}",
         }
 
-    def _automation_target(self, count: int, now_ms: int) -> tuple[str, dict[int, str], str]:
-        stage = stage_for_people_count(count)
-        if count == 0:
-            if self.zero_since_ms == 0:
-                self.zero_since_ms = now_ms
-            if now_ms - self.zero_since_ms < self.zero_off_ms:
-                base = dict(self.last_known_automation or desired_lab_relays_for_stage(self.active_stage))
-                return "ZERO_HOLD", self._apply_manual_overrides(base), "healthy zero hold"
-        else:
-            self.zero_since_ms = 0
-
-        if stage == self.active_stage:
-            base = dict(self.last_known_automation or desired_lab_relays_for_stage(stage))
-            return stage, self._apply_manual_overrides(base), "stage unchanged"
-
-        if stage == self.pending_stage:
-            self.pending_reads += 1
-        else:
-            self.pending_stage = stage
-            self.pending_reads = 1
-
-        if self.pending_reads < self.stable_reads_required or now_ms - self.last_apply_ms < self.min_change_ms:
-            base = dict(self.last_known_automation or desired_lab_relays_for_stage(self.active_stage))
-            return "STABILIZING", self._apply_manual_overrides(base), f"stabilizing {stage}"
-
-        self.pending_stage = ""
-        self.pending_reads = 0
-        self.active_stage = stage
-        self.last_apply_ms = now_ms
-        base = desired_lab_relays_for_stage(stage)
-        self.last_known_automation = dict(base)
-        return stage, self._apply_manual_overrides(base), f"applied {stage}"
-
     def _immediate_automation_target(self, count: int, now_ms: int) -> tuple[str, dict[int, str], str]:
-        stage = stage_for_people_count(count)
         if count == 0:
             if self.zero_since_ms == 0:
                 self.zero_since_ms = now_ms
             if now_ms - self.zero_since_ms < self.zero_off_ms:
                 base = dict(self.last_known_automation or desired_lab_relays_for_stage(self.active_stage))
                 return "ZERO_HOLD", self._apply_manual_overrides(base), "healthy zero hold"
+            self.high_load_latch = False
+            stage = "EMPTY_STAGE"
         else:
             self.zero_since_ms = 0
+            if count >= 4:
+                self.high_load_latch = True
+            stage = self._stage_for_latch(count)
 
         base = desired_lab_relays_for_stage(stage)
         self.active_stage = stage
         self.last_known_automation = dict(base)
-        self.pending_stage = ""
-        self.pending_reads = 0
         self.last_apply_ms = now_ms
         return stage, self._apply_manual_overrides(base), f"applied {stage}"
 
@@ -312,12 +282,22 @@ class PrioritySafetyController:
 
         self.latest_count = count
         self.last_count_ms = now_ms
+        if self.mode == "manual":
+            stage, wanted, reason = self._preserve_target("manual mode -> preserving relay state")
+            return {
+                "accepted": True,
+                "reason": reason,
+                "stage": stage,
+                "wanted": wanted,
+                "commands": [],
+                "manual_overrides": dict(self.manual_overrides),
+            }
         target_stage, wanted, reason = (
-            self._automation_target(count, now_ms)
+            self._immediate_automation_target(count, now_ms)
             if self.vision_is_healthy(now_ms)
             else self._preserve_target("vision unhealthy -> preserving relay state")
         )
-        commands = self._build_commands(wanted) if self.mode == "auto" and target_stage not in {"STABILIZING"} else []
+        commands = self._build_commands(wanted) if self.mode == "auto" and target_stage not in {"ZERO_HOLD"} else []
         return {
             "accepted": True,
             "reason": reason,

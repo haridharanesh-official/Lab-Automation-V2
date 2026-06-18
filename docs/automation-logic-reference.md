@@ -70,10 +70,8 @@ From the deployed priority controller:
 
 | Constant | Value | Meaning |
 | --- | ---: | --- |
-| `STABLE_READINGS` | `3` | Count stage must repeat 3 accepted readings before applying a new stage. |
 | `FRESH_MS` | `15000` ms | Vision heartbeat and people count must both be newer than 15 seconds. |
-| `ZERO_OFF_MS` | `300000` ms | Empty room must persist for 5 minutes before OFF is allowed. |
-| `MIN_CHANGE_MS` | `8000` ms | Minimum 8 seconds between applied automation stage changes. |
+| `ZERO_OFF_MS` | `60000` ms | Empty room must persist for 60 seconds before OFF is allowed. |
 | Controller tick / reconciliation | about `10000` ms | Auto-only feedback reconciliation checks desired relay state against `lab/control/relayX/state`. |
 | `AUTOMATION_COUNT_SOURCE` | `total-count` | Node-RED Auto currently reads total debounced `stable_count`, not zones. |
 
@@ -96,12 +94,14 @@ Node-RED ignores `zone_counts` for current Auto. It reads `lab/vision/people_cou
 
 | Stable count | Stage | Desired controlled relays |
 | ---: | --- | --- |
-| `0` | `EMPTY` / `ZERO_HOLD` | After continuous empty delay, all controlled loads OFF |
-| `1` | `ONE` | both lights ON, all fans OFF |
-| `2-3` | `TWO_THREE` | both lights + Fan 1 + Fan 4 ON |
-| `4+` | `FOUR_PLUS` | both lights + all fans ON |
+| `0` | `ZERO_HOLD` then `EMPTY_STAGE` | Preserve current Auto state for 60 continuous seconds, then all controlled loads OFF and high-load latch reset |
+| `1-3` with latch inactive | `LOW_STAGE` | relays `2,3,6,7` ON; relays `4,8` OFF |
+| `1-3` with latch active | `HIGH_STAGE` | relays `2,3,4,6,7,8` ON |
+| `4+` | `HIGH_STAGE` | relays `2,3,4,6,7,8` ON and high-load latch active |
 
-Controlled relay set: `2, 3, 4, 6, 7, 8`.
+Controlled relay set: `2, 3, 4, 6, 7, 8`. Spare relays `1` and `5` must never be commanded by automation.
+
+Previous logic directly mapped each current `stable_count` to a relay state. That meant a move from `4` to `3` could switch from all controlled loads ON back to lights plus two fans. The current logic adds a high-load latch: once `4+` people are detected, all controlled loads stay ON until the lab is confirmed empty for 60 continuous seconds. This prevents relay flicker when the count jumps around the `3/4` boundary or people pass through blind spots.
 
 ## Relay and Load Mapping
 
@@ -109,14 +109,16 @@ Verified from live Home Assistant MQTT discovery:
 
 | Load | Command topic | State topic |
 | --- | --- | --- |
-| Light A4 | `lab/control/relay7/set` | `lab/control/relay7/state` |
-| Light B2 | `lab/control/relay2/set` | `lab/control/relay2/state` |
+| Light 1 | `lab/control/relay7/set` | `lab/control/relay7/state` |
+| Light 2 | `lab/control/relay2/set` | `lab/control/relay2/state` |
 | Fan 1 | `lab/control/relay3/set` | `lab/control/relay3/state` |
 | Fan 2 | `lab/control/relay8/set` | `lab/control/relay8/state` |
 | Fan 3 | `lab/control/relay4/set` | `lab/control/relay4/state` |
 | Fan 4 | `lab/control/relay6/set` | `lab/control/relay6/state` |
 | Spare relay 1 | `lab/control/relay1/set` | `lab/control/relay1/state` |
 | Spare relay 5 | `lab/control/relay5/set` | `lab/control/relay5/state` |
+
+The live lab wiring is still 8-channel. Ten-relay support is a future hardware upgrade and must not be deployed until the physical circuit is implemented and validated.
 
 ## Warning and Stale Vision Behavior
 
@@ -155,12 +157,12 @@ Relay `/set` commands are emitted only in Auto and are sent with `retain=false`.
 
 Node-RED subscribes to `lab/control/status`.
 
-When the relay controller reports `offline`, Node-RED clears its cached relay feedback, last-command memory, and correction-memory. When the controller reports `online` again, Auto mode with healthy people count recomputes the desired state from the latest `stable_count` and sends one non-retained correction command for each controlled relay with unknown or mismatched feedback. If `stable_count = 0`, the normal empty-delay timer still applies before OFF commands are allowed.
+When the relay controller reports `offline`, Node-RED clears its cached relay feedback and correction-memory. When the controller reports `online` again, Auto mode with healthy people count recomputes the desired state from the latest `stable_count` and sends one non-retained correction command for each controlled relay with unknown or mismatched feedback. If `stable_count = 0`, the normal 60-second empty timer still applies before OFF commands are allowed.
 
 Node-RED also performs a safe Auto-only reconciliation on the controller tick, currently about every 10 seconds:
 
 - desired ON + feedback OFF, unknown, or missing -> send one ON correction for that observed feedback condition
-- desired OFF + feedback ON, unknown, or missing after empty delay -> send one OFF correction for that observed feedback condition
+- desired OFF + feedback ON, unknown, or missing after the 60-second empty delay -> send one OFF correction for that observed feedback condition
 - feedback already matches desired -> send no command
 - Manual and Monitor modes -> send zero physical relay commands
 - stale/unhealthy vision -> preserve relay states and do not force OFF from people count
@@ -185,7 +187,7 @@ SSH shell inspection of `labos` was attempted during this documentation pass, bu
 
 June 18, 2026 implementation note:
 
-- Repo flow now includes immediate Auto-entry recompute, stale-vision preserve-state behavior, and one-shot correction memory.
+- Repo flow now includes immediate Auto-entry recompute, stale-vision preserve-state behavior, high-load latch behavior, 60-second empty OFF delay, and one-shot correction memory.
 - Local tests pass with the stricter priority rules.
 - Live Node-RED admin access at `http://labos:1880/flows` was unavailable during deployment validation, and retained `lab/control/status` was `offline`, so physical Auto/reconnect validation was not completed in this pass.
 

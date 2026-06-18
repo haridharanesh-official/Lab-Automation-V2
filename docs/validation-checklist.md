@@ -147,6 +147,7 @@ Status labels:
 - [x] Validate periodic mismatch correction: forced `lab/control/relay2/state OFF` while desired `FOUR_PLUS` required ON; Node-RED sent one `lab/control/relay2/set ON`, feedback returned ON, and no repeated command spam followed.
 - [x] Add repo tests for immediate Auto-entry recompute, Manual preserve/no-AI-command behavior, Monitor zero relay commands, continuous empty-delay OFF, positive-count empty-timer reset, Auto relay reconnect/resync, retained feedback mismatch correction, stale-vision preserve-state behavior, and one-shot correction/no-spam behavior.
 - [x] Confirm current retained live mapping is still the 8-channel final lab wiring: relays `1` and `5` spare; controlled loads on relays `2,3,4,6,7,8`.
+- [x] Add repo tests for 8-relay LOW_STAGE/HIGH_STAGE behavior, high-load latch retention for later counts `1-3`, 60-second zero reset, and spare relay exclusion.
 - [ ] Redeploy the June 18 priority fix to live Node-RED after `labos:1880` admin access is reachable.
 - [ ] Rerun live Manual, Monitor, Auto-entry, empty-delay, relay reconnect, and no-spam validation after relay controller status returns `online`.
 - [ ] Continue longer supervised observation for empty-delay OFF, camera/AI failure fallback, MQTT interruption, ESP32 restart, and no-flicker behavior.

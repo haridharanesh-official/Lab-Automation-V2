@@ -20,10 +20,12 @@ The retained diagnostic topic `lab/automation/count_source` should be `total-cou
 The flow also publishes retained `lab/automation/status = online` so Home Assistant does not keep a stale `offline` automation status.
 
 Stage rules:
-- `0` people: controlled loads OFF only after the empty/off delay
-- `1` person: both lights ON
-- `2-3` people: both lights + Fan 1 + Fan 4 ON
-- `4+` people: both lights + all fans ON
+- `0` people: preserve current Auto stage for 60 continuous seconds, then controlled relays `2,3,4,6,7,8` OFF and high-load latch reset
+- `1-3` people with latch inactive: `LOW_STAGE`, relays `2,3,6,7` ON and relays `4,8` OFF
+- `4+` people: `HIGH_STAGE`, relays `2,3,4,6,7,8` ON and high-load latch active
+- after `HIGH_STAGE`, counts `1-3` stay in `HIGH_STAGE` until 60 continuous seconds of empty room
+
+Current live hardware is 8-channel final lab wiring. Relay `7` is Light 1, relay `2` is Light 2, relays `3,8,4,6` are Fans 1-4, and relays `1` and `5` are spares. Automation must never command spares `1` and `5`. Ten-relay support is future planned only.
 
 Manual override clear topic:
 
@@ -33,6 +35,7 @@ Do not deploy this updated repo flow onto `labos` without first backing up the l
 
 June 18 priority fix:
 - Auto entry immediately recomputes from the latest healthy `stable_count`.
-- Empty room must remain continuously zero for `300000` ms before OFF commands are allowed.
+- Empty room must remain continuously zero for `60000` ms before OFF commands are allowed.
+- High-load latch prevents flicker when counts move between `3` and `4`.
 - Relay reconnect and periodic reconciliation correct missing/mismatched feedback once per observed feedback condition.
 - Stale/unhealthy vision sends zero relay commands.
