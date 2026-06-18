@@ -2,7 +2,7 @@
 
 `Camera -> AI PC -> lab/vision/# -> Mosquitto -> Node-RED -> lab/control/relayX/set -> ESP32`
 
-Home Assistant uses MQTT for manual switches, mode selection, and monitoring. The AI PC has no API capable of relay command publication. Node-RED owns the relay path and now implements a strict priority order: manual override first, timetable fallback second, healthy people-count automation third. The flow rejects stale vision, preserves state on failure, applies delayed zero/off behavior, and deduplicates against confirmed relay state.
+Home Assistant uses MQTT for manual switches, mode selection, and monitoring. The AI PC has no API capable of relay command publication. Node-RED owns the relay path and now implements a strict priority order: Manual preserve first, stale-vision preserve-state second, Monitor diagnostics-only third, and healthy people-count Auto fourth. The flow rejects stale vision, preserves state on failure, applies delayed zero/off behavior, and deduplicates against confirmed relay state plus correction memory.
 
 ## Recovery
 

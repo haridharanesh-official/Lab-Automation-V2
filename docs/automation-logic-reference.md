@@ -1,6 +1,6 @@
 # LabOS Automation Logic Reference
 
-Last verified: 2026-06-17
+Last verified: 2026-06-18
 
 This document describes the current Lab Automation v2.0 runtime contract using the live `lab/...` MQTT namespace. It separates the AI PC, Node-RED automation authority, Home Assistant UI, and ESP32 relay feedback path.
 
@@ -74,22 +74,16 @@ From the deployed priority controller:
 | `FRESH_MS` | `15000` ms | Vision heartbeat and people count must both be newer than 15 seconds. |
 | `ZERO_OFF_MS` | `300000` ms | Empty room must persist for 5 minutes before OFF is allowed. |
 | `MIN_CHANGE_MS` | `8000` ms | Minimum 8 seconds between applied automation stage changes. |
-| `OUTSIDE_WINDOW_OFF_MS` | `300000` ms | Outside timetable fallback, preserve last state for 5 minutes before delayed OFF. |
 | Controller tick / reconciliation | about `10000` ms | Auto-only feedback reconciliation checks desired relay state against `lab/control/relayX/state`. |
 | `AUTOMATION_COUNT_SOURCE` | `total-count` | Node-RED Auto currently reads total debounced `stable_count`, not zones. |
-
-Fallback timetable windows:
-
-- `08:30-12:30`
-- `13:00-16:30`
 
 ## Mode Behavior
 
 | Mode | Relay behavior |
 | --- | --- |
-| Manual | Automation does not change relays. AI may keep publishing vision telemetry. Manual/HA relay changes are preserved as manual overrides. |
+| Manual | Automation does not change relays. AI may keep publishing vision telemetry. Manual/HA relay changes are preserved. Entering Manual does not force any relay ON or OFF. |
 | Monitor | Node-RED processes counts and publishes diagnostics/intended state only. Relay `/set` command count must remain `0`. |
-| Auto | Node-RED publishes relay commands only when the desired state differs from confirmed state and the last command. Commands are not retained. |
+| Auto | On every transition into Auto, Node-RED immediately recomputes desired state from the latest healthy `stable_count`. It corrects missing/mismatched feedback only in Auto. Commands are not retained. |
 
 Mode topics:
 
@@ -135,22 +129,22 @@ lab/automation/warning = none
 Stale or unhealthy vision publishes a retained warning such as:
 
 ```text
-vision unhealthy -> timetable fallback
+vision unhealthy -> preserving relay state
 ```
 
 If vision becomes stale/unhealthy in Auto:
 
 - `mode_state` remains `auto`.
 - People count is not trusted.
-- Node-RED uses timetable fallback/hold behavior.
-- It does not immediately turn everything OFF because of camera/AI failure.
+- Node-RED preserves the current/last-known relay state and sends zero physical relay commands.
+- It does not use stale vision, timetable memory, or retained relay desired state to force ON/OFF.
 
 ## No-Flicker and Dedup Behavior
 
 Node-RED deduplicates relay commands against:
 
 - confirmed `lab/control/relayX/state`
-- last command sent by automation
+- the last observed feedback condition already corrected by automation
 - minimum stage-change interval
 - stable-reading requirement
 - empty-delay requirement
@@ -161,12 +155,12 @@ Relay `/set` commands are emitted only in Auto and are sent with `retain=false`.
 
 Node-RED subscribes to `lab/control/status`.
 
-When the relay controller reports `offline`, Node-RED clears its cached relay feedback and last-command memory. When the controller reports `online` again, Auto mode with healthy non-zero people count recomputes the desired state from the latest `stable_count` and sends one non-retained correction command for each controlled relay with unknown or mismatched feedback.
+When the relay controller reports `offline`, Node-RED clears its cached relay feedback, last-command memory, and correction-memory. When the controller reports `online` again, Auto mode with healthy people count recomputes the desired state from the latest `stable_count` and sends one non-retained correction command for each controlled relay with unknown or mismatched feedback. If `stable_count = 0`, the normal empty-delay timer still applies before OFF commands are allowed.
 
 Node-RED also performs a safe Auto-only reconciliation on the controller tick, currently about every 10 seconds:
 
-- desired ON + feedback OFF, unknown, or missing -> send one ON correction
-- desired OFF + feedback ON -> send one OFF correction
+- desired ON + feedback OFF, unknown, or missing -> send one ON correction for that observed feedback condition
+- desired OFF + feedback ON, unknown, or missing after empty delay -> send one OFF correction for that observed feedback condition
 - feedback already matches desired -> send no command
 - Manual and Monitor modes -> send zero physical relay commands
 - stale/unhealthy vision -> preserve relay states and do not force OFF from people count
@@ -188,6 +182,12 @@ Direct MQTT inspection from the AI PC on 2026-06-17 showed:
 | retained relay states observed | relays `2,3,4,6,7,8,9,10 = OFF` |
 
 SSH shell inspection of `labos` was attempted during this documentation pass, but the SSH command timed out from the Codex session. Direct MQTT inspection against broker `labos:1883` succeeded and was used for the live snapshot above.
+
+June 18, 2026 implementation note:
+
+- Repo flow now includes immediate Auto-entry recompute, stale-vision preserve-state behavior, and one-shot correction memory.
+- Local tests pass with the stricter priority rules.
+- Live Node-RED admin access at `http://labos:1880/flows` was unavailable during deployment validation, and retained `lab/control/status` was `offline`, so physical Auto/reconnect validation was not completed in this pass.
 
 ## Safe Verification Commands
 

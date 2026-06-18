@@ -75,8 +75,8 @@ Status labels:
 - [x] Added selectable AI counting modes: `total-count` requires no zones and shows clean display; `zone-count` requires `config/zones.json` and shows full debug overlays.
 - [x] Added tests proving total-count display does not use debug overlay and zone-count display keeps it.
 - [x] Added retained Node-RED automation status publishing in the repo flow: `lab/automation/status = online`.
-- [x] Repo flow now models priority order: manual override > timetable fallback > healthy people-count automation.
-- [x] Repo flow now documents manual override clear topic and timetable fallback windows.
+- [x] Repo flow now models priority order: Manual preserve > stale-vision preserve-state > Monitor diagnostics > healthy people-count Auto.
+- [x] Repo flow now documents manual override clear topic and empty-room delay behavior.
 - [x] Verified stale or unhealthy vision no longer forces `mode_state` back to `manual`.
 - [x] Verified `auto` + stale vision keeps `mode_state = auto` and moves `priority_state` to fallback behavior.
 - [x] Verified live `lab/...` diagnostics after deployment: `mode_state`, `manual_override_state`, `priority_state`, `vision_health`, `warning`, `intended_state`.
@@ -84,7 +84,7 @@ Status labels:
 - [x] Verified live manual override capture and clear on `labos`.
 - [x] Modernized the legacy `labos-automation.service` bridge on `labos` into a passive observer so it no longer republishes `lab/automation/mode` or relay `/set`.
 - [x] Modernized `labos-system-health.service` to observe the current `lab/vision/people_count` JSON topic instead of the old `/state` count.
-- [ ] Verify live inside-window timetable fallback during `08:30-12:30` or `13:00-16:30`.
+- [ ] Verify live stale-vision preserve-state behavior with zero relay `/set` commands.
 - [x] Auto deduplicates relay commands and requires two empty reports before OFF in software tests.
 - [x] Validated relay mapping in software tests.
 
@@ -145,4 +145,8 @@ Status labels:
 - [x] Validate controlled relay reconnect simulation: `stable_count = 7` produced one non-retained ON command each for relays `2,3,4,6,7,8`; matching state feedback returned; repeated `online` produced `0` relay `/set`.
 - [x] Add Auto-only periodic feedback reconciliation: every controller tick, compare desired state to `lab/control/relayX/state`, resend only missing/mismatched non-retained commands, and keep Manual/Monitor at `0` physical relay commands.
 - [x] Validate periodic mismatch correction: forced `lab/control/relay2/state OFF` while desired `FOUR_PLUS` required ON; Node-RED sent one `lab/control/relay2/set ON`, feedback returned ON, and no repeated command spam followed.
+- [x] Add repo tests for immediate Auto-entry recompute, Manual preserve/no-AI-command behavior, Monitor zero relay commands, continuous empty-delay OFF, positive-count empty-timer reset, Auto relay reconnect/resync, retained feedback mismatch correction, stale-vision preserve-state behavior, and one-shot correction/no-spam behavior.
+- [x] Confirm current retained live mapping is still the 8-channel final lab wiring: relays `1` and `5` spare; controlled loads on relays `2,3,4,6,7,8`.
+- [ ] Redeploy the June 18 priority fix to live Node-RED after `labos:1880` admin access is reachable.
+- [ ] Rerun live Manual, Monitor, Auto-entry, empty-delay, relay reconnect, and no-spam validation after relay controller status returns `online`.
 - [ ] Continue longer supervised observation for empty-delay OFF, camera/AI failure fallback, MQTT interruption, ESP32 restart, and no-flicker behavior.

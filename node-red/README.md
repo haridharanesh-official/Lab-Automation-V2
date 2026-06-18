@@ -8,9 +8,10 @@ The repo flow in [flows.json](/C:/Users/prith/Downloads/Lab%20Automation%20v2.0/
 
 Priority order implemented in the repo flow:
 
-1. manual override
-2. timetable fallback
-3. healthy people-count automation
+1. Manual mode: preserve current relay state and send no AI relay commands.
+2. Stale/unhealthy vision: preserve current/last-known relay state and publish a warning.
+3. Monitor mode: compute intended state diagnostics and send zero physical relay commands.
+4. Auto mode with healthy vision: compute from latest debounced people count and correct only missing/mismatched relay feedback.
 
 Current Auto behavior is people-count-only. The flow reads `lab/vision/people_count.stable_count` and ignores `zone_counts` for relay decisions until zone calibration is physically validated.
 
@@ -29,3 +30,9 @@ Manual override clear topic:
 - `lab/automation/manual_override/clear`
 
 Do not deploy this updated repo flow onto `labos` without first backing up the live flow and validating the change in Monitor mode.
+
+June 18 priority fix:
+- Auto entry immediately recomputes from the latest healthy `stable_count`.
+- Empty room must remain continuously zero for `300000` ms before OFF commands are allowed.
+- Relay reconnect and periodic reconciliation correct missing/mismatched feedback once per observed feedback condition.
+- Stale/unhealthy vision sends zero relay commands.

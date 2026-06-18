@@ -133,17 +133,13 @@ def test_artifacts_enforce_namespace_and_gpio():
     fn_node = next(node for node in flow if node.get("type") == "function" and node.get("name") == "Priority Safety Controller")
     func = fn_node["func"]
     assert "manual_override/clear" in json.dumps(flow)
-    assert "TIMETABLE_FALLBACK" in func
     assert "manualOverrides" in func
     assert "priority_state" in func
-    assert "8*60+30" in func and "13*60" in func
     assert "topic==='lab/automation/mode'" in func
     assert "String(msg.payload).trim().toLowerCase()" in func
     assert "['manual','monitor','auto'].includes(next)" in func
     assert "diagnostics.push(m('lab/automation/mode_state',value,true))" in func
     assert "decisionSource:'PEOPLE_COUNT'" in func
-    assert "decisionSource:'TIMETABLE_FALLBACK'" in func
-    assert "decisionSource:'TIMETABLE_HOLD'" in func
     assert "decisionSource:'VISION_STALE'" in func
     assert "hasManualOverrides()" in func
     assert "decision_source:target.decisionSource" in func
@@ -370,8 +366,8 @@ def test_priority_controller_timetable_fallback_inside_window():
     controller.mark_source_status("unhealthy")
     now = datetime(2026, 6, 16, 9, 0, 0)
     result = controller.process_people_count({}, now)
-    assert result["stage"] == "TIMETABLE_FALLBACK"
-    assert result["wanted"] == desired_lab_relays_for_stage("FOUR_PLUS")
+    assert result["stage"] == "VISION_STALE"
+    assert result["commands"] == []
 
 
 def test_priority_controller_outside_window_delays_off():
@@ -380,10 +376,10 @@ def test_priority_controller_outside_window_delays_off():
     controller.mark_service_status("offline")
     controller.mark_source_status("unhealthy")
     first = controller.process_people_count({}, datetime(2026, 6, 16, 18, 0, 0))
-    assert first["stage"] == "TIMETABLE_HOLD"
-    controller.fallback_off_since_ms -= controller.outside_window_off_delay_ms + 1
+    assert first["stage"] == "VISION_STALE"
     second = controller.process_people_count({}, datetime(2026, 6, 16, 18, 10, 0))
-    assert second["stage"] == "TIMETABLE_OFF"
+    assert second["stage"] == "VISION_STALE"
+    assert second["commands"] == []
 
 
 def test_priority_controller_healthy_people_count_drives_automation():
@@ -462,8 +458,8 @@ def test_priority_controller_auto_stale_vision_keeps_mode_and_uses_fallback():
     now = datetime(2026, 6, 16, 9, 0, 0)
     result = controller.process_people_count({}, now)
     assert controller.mode == "auto"
-    assert result["stage"] == "TIMETABLE_FALLBACK"
-    assert result["commands"] != []
+    assert result["stage"] == "VISION_STALE"
+    assert result["commands"] == []
 
 
 def test_priority_controller_manual_and_monitor_stale_emit_no_commands():
@@ -518,6 +514,126 @@ def test_priority_controller_relay_reconnect_resyncs_unchanged_auto_count():
     assert repeated["commands"] == []
 
 
+def test_priority_controller_entering_auto_recalculates_latest_count_immediately():
+    controller = PrioritySafetyController(mode="manual")
+    now = datetime(2026, 6, 18, 10, 0, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.latest_count = 3
+    controller.last_count_ms = now_ms
+    controller.confirmed = {2: "OFF", 3: "OFF", 4: "OFF", 6: "OFF", 7: "OFF", 8: "OFF"}
+    controller.last_commanded = {2: "ON", 3: "ON", 6: "ON", 7: "ON"}
+
+    result = controller.set_mode("auto", now)
+
+    assert result["stage"] == "TWO_THREE"
+    assert result["wanted"] == desired_lab_relays_for_stage("TWO_THREE")
+    assert {command["relay"] for command in result["commands"]} == {2, 3, 6, 7}
+
+
+def test_priority_controller_entering_manual_preserves_state_and_sends_no_commands():
+    controller = PrioritySafetyController(mode="auto")
+    controller.confirmed = {2: "ON", 3: "OFF", 7: "ON"}
+    result = controller.set_mode("manual", datetime(2026, 6, 18, 10, 0, 0))
+    assert result is None
+    assert controller.confirmed == {2: "ON", 3: "OFF", 7: "ON"}
+
+
+def test_priority_controller_monitor_processes_count_with_zero_commands():
+    controller = PrioritySafetyController(mode="monitor")
+    controller.stable_reads_required = 1
+    controller.min_change_ms = 0
+    now = datetime(2026, 6, 18, 10, 0, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    payload = {"timestamp": now_ms, "stable_count": 4, "source_healthy": True, "status": "online"}
+    result = controller.process_people_count(payload, now)
+    assert result["stage"] == "FOUR_PLUS"
+    assert result["wanted"] == desired_lab_relays_for_stage("FOUR_PLUS")
+    assert result["commands"] == []
+
+
+def test_priority_controller_zero_count_requires_empty_delay_before_off():
+    controller = PrioritySafetyController(mode="auto")
+    controller.stable_reads_required = 1
+    controller.min_change_ms = 0
+    now = datetime(2026, 6, 18, 10, 0, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.latest_count = 0
+    controller.last_count_ms = now_ms
+    controller.active_stage = "FOUR_PLUS"
+    controller.last_known_automation = desired_lab_relays_for_stage("FOUR_PLUS")
+    controller.confirmed = desired_lab_relays_for_stage("FOUR_PLUS")
+
+    first = controller.set_mode("auto", now)
+    assert first["stage"] == "ZERO_HOLD"
+    assert first["commands"] == []
+
+    later = now.replace(minute=6)
+    controller.mark_heartbeat(int(later.timestamp() * 1000))
+    controller.last_count_ms = int(later.timestamp() * 1000)
+    controller.latest_count = 0
+    second = controller.reconcile_feedback(later)
+    assert second["stage"] == "EMPTY"
+    assert second["wanted"] == desired_lab_relays_for_stage("EMPTY")
+    assert {command["relay"] for command in second["commands"]} == {2, 3, 4, 6, 7, 8}
+
+
+def test_priority_controller_positive_count_resets_empty_timer():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 18, 10, 0, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.zero_since_ms = now_ms
+    payload = {"timestamp": now_ms, "stable_count": 1, "source_healthy": True, "status": "online"}
+    controller.stable_reads_required = 1
+    controller.min_change_ms = 0
+    controller.process_people_count(payload, now)
+    assert controller.zero_since_ms == 0
+
+
+def test_priority_controller_unknown_feedback_commands_once_until_feedback_changes():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 18, 10, 0, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.latest_count = 1
+    controller.last_count_ms = now_ms
+
+    first = controller.reconcile_feedback(now)
+    second = controller.reconcile_feedback(now)
+    assert {command["relay"] for command in first["commands"]} == {2, 3, 4, 6, 7, 8}
+    assert second["commands"] == []
+
+
+def test_priority_controller_retained_old_feedback_mismatch_corrected_once_in_auto():
+    controller = PrioritySafetyController(mode="auto")
+    now = datetime(2026, 6, 18, 10, 0, 0)
+    now_ms = int(now.timestamp() * 1000)
+    controller.mark_service_status("online")
+    controller.mark_source_status("healthy")
+    controller.mark_heartbeat(now_ms)
+    controller.latest_count = 4
+    controller.last_count_ms = now_ms
+    controller.confirmed = {2: "OFF", 3: "ON", 4: "ON", 6: "ON", 7: "ON", 8: "ON"}
+    controller.last_commanded = {2: "ON"}
+
+    result = controller.set_mode("auto", now)
+    assert result["commands"] == [{"relay": 2, "state": "ON"}]
+    assert controller.reconcile_feedback(now)["commands"] == []
+
+
 def test_priority_controller_relay_reconnect_does_not_resync_manual_or_monitor():
     now = datetime(2026, 6, 16, 9, 5, 0)
     now_ms = int(now.timestamp() * 1000)
@@ -569,6 +685,7 @@ def test_priority_controller_periodic_reconcile_corrects_off_mismatch():
     controller.latest_count = 0
     controller.last_count_ms = now_ms
     controller.active_stage = "EMPTY"
+    controller.zero_since_ms = now_ms - controller.zero_off_ms - 1
     controller.last_known_automation = desired_lab_relays_for_stage("EMPTY")
     controller.confirmed = {2: "ON", 3: "OFF", 4: "OFF", 6: "OFF", 7: "ON", 8: "OFF"}
     result = controller.reconcile_feedback(now)
@@ -782,9 +899,12 @@ def test_node_red_auto_uses_stable_people_count_not_zone_counts():
     assert "AUTOMATION_COUNT_SOURCE = 'total-count'" in func
     assert "lab/automation/status','online',true" in func
     assert "lab/automation/count_source" in func
-    assert "lab/automation/warning',isHealthy?'none':'vision unhealthy -> timetable fallback',true" in func
+    assert "lab/automation/warning',isHealthy?'none':'vision unhealthy -> preserving relay state',true" in func
     assert "lab/automation/warning','none',true" in func
     assert "forceCommandsForUnknownOrMismatch" in func
+    assert "correctionFeedback" in func
+    assert "stalePreserveTarget" in func
+    assert "immediateAutomationTarget" in func
     assert "relay controller offline -> cleared known relay feedback" in func
     assert "relay controller reconnected -> resync desired Auto state" in func
     assert "periodicReconcileTarget" in func

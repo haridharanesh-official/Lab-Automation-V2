@@ -40,7 +40,7 @@ The runtime config remains pointed at the custom `models/backcam_yolov8s_improve
 
 Status: Software validation complete
 
-- Local tests: 34 passed
+- Local tests: 63 passed
 - Dependencies: no broken requirements
 - AI publisher safety: refuses relay/control/set/command topics
 - Live deployment contract update: AI telemetry now targets `lab/vision/...` topics consumed by the current `labos` Node-RED runtime.
@@ -154,8 +154,8 @@ Status: Hardware deployment pending
 
 - Updated repo priority-safety flow was deployed to live `labos` Node-RED on June 16, 2026.
 - Live pre-deploy backup saved to `/home/labos/labos-v2-backups/nodered/flows-20260616-213250.json`.
-- Repo flow design now implements priority order: manual override, then timetable fallback, then healthy people-count automation.
-- Repo flow now includes documented manual override clearing and fallback windows `08:30-12:30` and `13:00-16:30`.
+- Repo flow design now implements priority order: Manual preserve, stale-vision preserve-state, Monitor diagnostics-only, then healthy people-count Auto.
+- Repo flow now includes documented manual override clearing and empty-room delay behavior.
 - Deployed Node-RED process on `labos`: running
 - Deployed runtime mode observed on MQTT during validation: `manual`
 - Live AI -> MQTT -> deployed Node-RED path: verified
@@ -163,11 +163,11 @@ Status: Hardware deployment pending
 - Live broker deployment/startup relay `/set` commands observed: `0`
 - Live broker simulation relay `/set` commands observed in Manual/Monitor validation: `0`
 - Manual override capture and clear were verified live.
-- Outside-window timetable fallback was verified live as `TIMETABLE_HOLD`.
+- Older outside-window timetable fallback validation is historical; the June 18 repo logic now preserves relay state on stale/unhealthy vision and sends zero relay commands.
 - Healthy people-count path was verified live in Monitor mode through `intended_state` output with zero relay commands.
 - People-count-only Auto mapping is covered by tests against both the Python priority controller and the repo Node-RED function source; the Node-RED function reads `stable_count` and does not consume `zone_counts` for relay decisions.
 - Repo Node-RED flow now publishes retained `lab/automation/status = online` and `lab/automation/count_source = total-count` whenever controller diagnostics are emitted.
-- Inside-window timetable fallback still needs a live validation pass during an active class window.
+- Stale/unhealthy vision preserve-state behavior still needs a clean live validation pass.
 - Follow-up debug confirmed the correct live mode command is plain retained string payloads on `lab/automation/mode` such as `auto`; the earlier failed Auto confirmation was caused by reading the stale retained `mode_state=manual` message before the fresh `mode_state=auto` event arrived.
 - A later live validation confirmed that stale or unhealthy vision does not force `mode_state` back to `manual`; `mode_state` stayed `auto` while `priority_state` moved through `VISION_STALE` and `TIMETABLE_HOLD`.
 - Empty-lab stability validation later confirmed that repeated `stable_count = 0` is the correct result for the currently empty room and not evidence of a failed model.
@@ -287,9 +287,11 @@ Status: People-count Auto deployed under supervision; zone-count calibration sti
   - Root cause: Auto-mode OFF feedback after relay power loss was being captured as a manual override.
   - Fix: Node-RED now captures relay feedback as a manual override only in Manual mode; Auto-mode mismatches are left for automation correction.
   - Post-fix live check showed `manual_override_state {}`, `priority_state = PEOPLE_COUNT`, `FOUR_PLUS`, and controlled relay states ON.
-  - Periodic Auto feedback reconciliation was added after the reconnect fix. On each controller tick, currently about every 10 seconds, Auto compares desired people-count relay state with actual `lab/control/relayX/state`.
-  - If feedback is OFF, unknown, or missing while desired is ON, Node-RED sends one non-retained ON correction; if feedback is ON while desired is OFF, it sends one non-retained OFF correction.
-  - Controlled live validation forced `lab/control/relay2/state OFF` while `FOUR_PLUS` required relay 2 ON; the next tick sent one `lab/control/relay2/set ON`, feedback returned `ON`, and later ticks produced no repeated identical command spam.
+- Periodic Auto feedback reconciliation was added after the reconnect fix. On each controller tick, currently about every 10 seconds, Auto compares desired people-count relay state with actual `lab/control/relayX/state`.
+- If feedback is OFF, unknown, or missing while desired is ON, Node-RED sends one non-retained ON correction; if feedback is ON while desired is OFF, it sends one non-retained OFF correction.
+- Controlled live validation forced `lab/control/relay2/state OFF` while `FOUR_PLUS` required relay 2 ON; the next tick sent one `lab/control/relay2/set ON`, feedback returned `ON`, and later ticks produced no repeated identical command spam.
+- June 18 repo fix tightens priority behavior: Manual entry preserves current relay states; Monitor sends zero physical relay commands; stale/unhealthy vision preserves relay state and sends zero relay commands; Auto entry immediately recomputes from latest healthy `stable_count`; missing/unknown feedback receives one correction command per observed feedback condition; relay `/set` commands remain non-retained.
+- June 18 live validation was blocked: Node-RED admin port `labos:1880` was not reachable after the deployment attempt, SSH did not complete from this Codex session, retained mode remained `manual`, and retained `lab/control/status` was `offline`.
 
 ## Failure-Test Readiness
 

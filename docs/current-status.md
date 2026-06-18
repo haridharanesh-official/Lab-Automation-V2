@@ -1,13 +1,13 @@
 # Current Status
 
-**Status: People-count Auto deployed under supervision; zone-count calibration still pending**
+**Status: Priority logic fixed in repo; live redeploy/physical validation blocked by LabOS service access**
 
 The AI Publisher, Node-RED logic, and ESP32 firmware have all passed unit tests and simulated checks.
 On June 17, 2026, the live `labos` runtime was inspected over SSH with physical supervision in the lab. The final runtime namespace is `lab/...`; older `labos/v2/...` topics are historical only.
 
 ## What is Working
 - `start_lab_automation.ps1 -Display` launches successfully.
-- Pytest suite (`pytest tests/`) passes 100% (49 tests), proving selectable AI counting modes, zone-mapping logic, people-count Auto rules, Node-RED monitor mode behavior, and safety namespaces.
+- Pytest suite (`pytest tests/`) passes 100% (63 tests), proving selectable AI counting modes, zone-mapping logic, people-count Auto rules, Node-RED monitor mode behavior, mode-transition priority, empty-delay behavior, relay reconnect/resync behavior, stale-vision preservation, and safety namespaces.
 - Simulated reports confirm that when `lab/automation/mode` is `monitor`, Node-RED correctly processes zone occupancy to intended relay states but sends 0 physical `/set` commands.
 - Current Auto logic is people-count based, not zone based. Node-RED uses `lab/vision/people_count.stable_count` for stages: `0` delayed OFF, `1` both lights, `2-3` both lights plus Fan 1/Fan 4, and `4+` both lights plus all fans.
 - AI publisher modes are now explicit: `total-count` is usable now for Auto and shows clean display footage; `zone-count` is available for debug/calibration and shows full boxes/zones/foot-point overlays.
@@ -29,9 +29,11 @@ On June 17, 2026, the live `labos` runtime was inspected over SSH with physical 
 - Follow-up live issue showed Auto was healthy with `stable_count = 7`, but all controlled relays were held OFF by `manual_override_state`. Root cause: Auto-mode relay OFF feedback after power loss had been captured as manual overrides. The flow now captures manual overrides only in Manual mode; Auto feedback mismatches are corrected by automation instead of frozen.
 - After clearing overrides and redeploying the fix, live Auto showed `manual_override_state {}`, `priority_state = PEOPLE_COUNT`, `stage = FOUR_PLUS`, and all controlled relay states ON.
 - Periodic Auto feedback reconciliation is now deployed. Every controller tick, currently about 10 seconds, Node-RED compares the desired people-count relay state with `lab/control/relayX/state` and sends only missing/mismatched non-retained corrections. Controlled live validation forced `relay2/state OFF` while `FOUR_PLUS` required relay 2 ON; the next tick sent one `lab/control/relay2/set ON`, feedback returned ON, and later ticks did not spam repeated commands.
+- June 18 repo fix: Manual mode now preserves current relay state on entry and sends no AI commands; Monitor computes diagnostics but sends zero physical commands; Auto entry immediately recomputes from latest healthy `stable_count`; stale/unhealthy vision preserves relay state and sends zero physical commands; missing/mismatched relay feedback correction is one-shot per observed feedback condition.
 
 ## Blockers
 - **Physical Walk Test**: Requires a human to walk through zones 1-6 physically in front of the camera before zone-count automation can be trusted.
 - **HA Dashboard Verification**: MQTT discovery and command topics are verified, and the user reported Home Assistant can physically control all fans/lights. Direct API/dashboard reads still require an authenticated Home Assistant session.
 - **Zone-count Calibration**: Production automation is currently people-count based. Zone-count mode remains available for debugging/calibration but is not the deployed Auto decision source.
 - **Long-run Production Gate**: Continue supervised observation for empty-delay OFF, camera-failure hold/fallback, MQTT interruption, ESP32 restart behavior, and longer no-flicker operation under changing occupancy.
+- **June 18 Live Redeploy Blocker**: `labos:1880` Node-RED admin API was unavailable after the deployment attempt, SSH did not complete from this Codex session, and retained `lab/control/status` was `offline`. Broker `labos:1883` remained reachable and retained `mode_state = manual`.

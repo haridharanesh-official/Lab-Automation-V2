@@ -100,6 +100,7 @@ class PrioritySafetyController:
     confirmed: dict[int, str] = field(default_factory=dict)
     manual_overrides: dict[int, str] = field(default_factory=dict)
     last_commanded: dict[int, str] = field(default_factory=dict)
+    last_correction_feedback: dict[int, str] = field(default_factory=dict)
     last_known_automation: dict[int, str] | None = None
     service_online: bool = False
     source_healthy: bool = False
@@ -110,23 +111,28 @@ class PrioritySafetyController:
     pending_stage: str = ""
     pending_reads: int = 0
     zero_since_ms: int = 0
-    fallback_off_since_ms: int = 0
     last_apply_ms: int = 0
     stable_reads_required: int = 3
     fresh_ms: int = 15_000
     zero_off_ms: int = 300_000
     min_change_ms: int = 8_000
-    outside_window_off_delay_ms: int = 300_000
     relay_online: bool = False
     relay_resync_needed: bool = False
 
-    def set_mode(self, mode: str) -> None:
+    def set_mode(self, mode: str, now: datetime | None = None) -> dict | None:
         if mode not in {"manual", "monitor", "auto"}:
             raise ValueError("invalid mode")
+        was_mode = self.mode
         self.mode = mode
         if mode != "auto":
             self.zero_since_ms = 0
-            self.fallback_off_since_ms = 0
+            return None
+        if was_mode != "auto":
+            self.last_commanded.clear()
+            self.last_correction_feedback.clear()
+        if now is not None:
+            return self.recompute_on_auto_entry(now)
+        return None
 
     def update_confirmed(self, relay: int, state: str, infer_manual: bool = False) -> None:
         value = state.upper()
@@ -141,6 +147,7 @@ class PrioritySafetyController:
         if not online:
             self.confirmed.clear()
             self.last_commanded.clear()
+            self.last_correction_feedback.clear()
             self.relay_resync_needed = True
             return {"status": "offline", "commands": []}
         if not was_online and self.relay_resync_needed:
@@ -183,73 +190,53 @@ class PrioritySafetyController:
         commands = []
         for relay, state in wanted.items():
             confirmed = self.confirmed.get(relay)
-            last = self.last_commanded.get(relay)
-            if confirmed != state and last != state:
+            feedback_key = confirmed if confirmed is not None else "UNKNOWN"
+            if confirmed != state and self.last_correction_feedback.get(relay) != feedback_key:
                 commands.append({"relay": relay, "state": state})
                 self.last_commanded[relay] = state
+                self.last_correction_feedback[relay] = feedback_key
         return commands
 
     def _force_commands_for_unknown_or_mismatch(self, wanted: dict[int, str]) -> list[dict]:
-        commands = []
-        for relay, state in wanted.items():
-            if self.confirmed.get(relay) != state:
-                commands.append({"relay": relay, "state": state})
-                self.last_commanded[relay] = state
-        return commands
+        return self._build_commands(wanted)
+
+    def _preserve_target(self, reason: str) -> tuple[str, dict[int, str], str]:
+        base = dict(self.last_known_automation or self.confirmed)
+        return "VISION_STALE", self._apply_manual_overrides(base), reason
 
     def resync_after_relay_online(self, now: datetime) -> dict:
         now_ms = int(now.timestamp() * 1000)
         count = self.latest_count
-        if self.mode != "auto" or not self.vision_is_healthy(now_ms) or count is None or count <= 0:
+        if self.mode != "auto" or not self.vision_is_healthy(now_ms) or count is None:
             return {"stage": "RELAY_ONLINE_NO_RESYNC", "wanted": {}, "commands": []}
-        stage = stage_for_people_count(count)
-        base = desired_lab_relays_for_stage(stage)
-        self.active_stage = stage
-        self.last_known_automation = dict(base)
-        wanted = self._apply_manual_overrides(base)
-        commands = self._force_commands_for_unknown_or_mismatch(wanted)
+        result = self.recompute_on_auto_entry(now)
+        result["reason"] = "relay controller reconnected -> resync desired Auto state"
         self.relay_resync_needed = False
-        return {
-            "stage": stage,
-            "wanted": wanted,
-            "commands": commands,
-            "reason": "relay controller reconnected -> resync desired Auto state",
-        }
+        return result
+
+    def recompute_on_auto_entry(self, now: datetime) -> dict:
+        now_ms = int(now.timestamp() * 1000)
+        count = self.latest_count
+        if self.mode != "auto" or not self.vision_is_healthy(now_ms) or count is None:
+            stage, wanted, reason = self._preserve_target("vision unhealthy -> preserving relay state")
+            return {"stage": stage, "wanted": wanted, "commands": [], "reason": reason}
+        target_stage, wanted, reason = self._immediate_automation_target(count, now_ms)
+        commands = [] if target_stage == "ZERO_HOLD" else self._force_commands_for_unknown_or_mismatch(wanted)
+        return {"stage": target_stage, "wanted": wanted, "commands": commands, "reason": reason}
 
     def reconcile_feedback(self, now: datetime) -> dict:
         now_ms = int(now.timestamp() * 1000)
         count = self.latest_count
         if self.mode != "auto" or not self.vision_is_healthy(now_ms) or count is None:
             return {"stage": "RECONCILE_SKIPPED", "wanted": {}, "commands": []}
-        if count > 0:
-            stage = stage_for_people_count(count)
-            base = desired_lab_relays_for_stage(stage)
-        else:
-            stage = self.active_stage
-            base = dict(self.last_known_automation or desired_lab_relays_for_stage(stage))
-        wanted = self._apply_manual_overrides(base)
-        commands = self._force_commands_for_unknown_or_mismatch(wanted)
+        stage, wanted, reason = self._immediate_automation_target(count, now_ms)
+        commands = [] if stage == "ZERO_HOLD" else self._force_commands_for_unknown_or_mismatch(wanted)
         return {
             "stage": stage,
             "wanted": wanted,
             "commands": commands,
-            "reason": "periodic relay feedback reconciliation",
+            "reason": f"periodic relay feedback reconciliation: {reason}",
         }
-
-    def _fallback_target(self, now: datetime, now_ms: int) -> tuple[str, dict[int, str], str]:
-        within_window = is_within_fallback_window(now)
-        if within_window:
-            self.fallback_off_since_ms = 0
-            base = dict(self.last_known_automation or desired_lab_relays_for_stage("FOUR_PLUS"))
-            return "TIMETABLE_FALLBACK", self._apply_manual_overrides(base), "vision unhealthy -> timetable fallback"
-
-        if self.fallback_off_since_ms == 0:
-            self.fallback_off_since_ms = now_ms
-        if now_ms - self.fallback_off_since_ms < self.outside_window_off_delay_ms:
-            base = dict(self.last_known_automation or desired_lab_relays_for_stage("FOUR_PLUS"))
-            return "TIMETABLE_HOLD", self._apply_manual_overrides(base), "vision unhealthy -> preserving last known state outside timetable"
-
-        return "TIMETABLE_OFF", self._apply_manual_overrides(desired_lab_relays_for_stage("EMPTY")), "vision unhealthy -> safe delayed off outside timetable"
 
     def _automation_target(self, count: int, now_ms: int) -> tuple[str, dict[int, str], str]:
         stage = stage_for_people_count(count)
@@ -284,6 +271,25 @@ class PrioritySafetyController:
         self.last_known_automation = dict(base)
         return stage, self._apply_manual_overrides(base), f"applied {stage}"
 
+    def _immediate_automation_target(self, count: int, now_ms: int) -> tuple[str, dict[int, str], str]:
+        stage = stage_for_people_count(count)
+        if count == 0:
+            if self.zero_since_ms == 0:
+                self.zero_since_ms = now_ms
+            if now_ms - self.zero_since_ms < self.zero_off_ms:
+                base = dict(self.last_known_automation or desired_lab_relays_for_stage(self.active_stage))
+                return "ZERO_HOLD", self._apply_manual_overrides(base), "healthy zero hold"
+        else:
+            self.zero_since_ms = 0
+
+        base = desired_lab_relays_for_stage(stage)
+        self.active_stage = stage
+        self.last_known_automation = dict(base)
+        self.pending_stage = ""
+        self.pending_reads = 0
+        self.last_apply_ms = now_ms
+        return stage, self._apply_manual_overrides(base), f"applied {stage}"
+
     def process_people_count(self, payload: dict, now: datetime) -> dict:
         now_ms = int(now.timestamp() * 1000)
         if not isinstance(payload, dict):
@@ -300,8 +306,8 @@ class PrioritySafetyController:
             and abs(now_ms - ts) <= self.fresh_ms
         )
         if not valid:
-            target_stage, wanted, reason = self._fallback_target(now, now_ms)
-            commands = self._build_commands(wanted) if self.mode == "auto" else []
+            target_stage, wanted, reason = self._preserve_target("vision unhealthy -> preserving relay state")
+            commands = []
             return {"accepted": False, "reason": reason, "stage": target_stage, "wanted": wanted, "commands": commands}
 
         self.latest_count = count
@@ -309,7 +315,7 @@ class PrioritySafetyController:
         target_stage, wanted, reason = (
             self._automation_target(count, now_ms)
             if self.vision_is_healthy(now_ms)
-            else self._fallback_target(now, now_ms)
+            else self._preserve_target("vision unhealthy -> preserving relay state")
         )
         commands = self._build_commands(wanted) if self.mode == "auto" and target_stage not in {"STABILIZING"} else []
         return {

@@ -93,4 +93,4 @@ Before Node-RED publishes a `lab/control/relayX/set` message, it checks the curr
 
 If a network glitch causes the AI PC to temporarily report `0` people when there are actually 10, turning off all lights immediately would leave everyone in the dark. 
 
-By enforcing **stale camera handling** (freezing state on failure), **two-empty-report guard**, and **timetable fallback**, we ensure that glitches only cause lights to stay ON (fail-safe) rather than turning OFF (fail-unsafe).
+By enforcing **stale camera handling** (freezing state on failure), **continuous empty-room delay**, and **Auto-only correction**, glitches preserve the current relay state rather than making stale data force loads ON or OFF.
