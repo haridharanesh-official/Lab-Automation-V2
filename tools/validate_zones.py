@@ -214,10 +214,12 @@ def save_zone_document(path: str | Path, document: dict[str, Any]) -> Path | Non
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate Lab Automation zone polygons.")
+    parser.add_argument("zones_path", nargs="?")
     parser.add_argument("--zones", default="config/zones.json")
     parser.add_argument("--point", nargs=2, type=int, metavar=("X", "Y"))
     args = parser.parse_args()
-    document, warnings = load_zone_document(args.zones)
+    zones_path = args.zones_path or args.zones
+    document, warnings = load_zone_document(zones_path)
     validation = validate_zone_document(document)
     for warning in warnings + validation.warnings:
         print(f"WARNING: {warning}")

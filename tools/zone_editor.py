@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import sys
 from pathlib import Path
 
 import cv2
@@ -17,6 +18,7 @@ VALIDATOR_PATH = Path(__file__).with_name("validate_zones.py")
 spec = importlib.util.spec_from_file_location("validate_zones", VALIDATOR_PATH)
 validate_zones = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
+sys.modules[spec.name] = validate_zones
 spec.loader.exec_module(validate_zones)
 
 
