@@ -71,7 +71,11 @@ def load_zones(path: str) -> list[list[tuple[int, int]]]:
     if not zone_path.exists():
         return []
     data = json.loads(zone_path.read_text())
-    return [[tuple(point) for point in polygon] for polygon in data.get("zones", [])]
+    zones = []
+    for index, raw_zone in enumerate(data.get("zones", []), 1):
+        points = raw_zone.get("points", []) if isinstance(raw_zone, dict) else raw_zone
+        zones.append([tuple(point) for point in points])
+    return zones
 
 
 def normalize_counting_mode(value: str | None) -> str:
